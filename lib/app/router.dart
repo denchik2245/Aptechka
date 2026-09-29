@@ -1,7 +1,8 @@
-import 'package:aptechka/features/home/presentation/home_screen.dart';
+import 'package:aptechka/features/home/presentation/pharmacies_screen.dart';
 import 'package:aptechka/features/inventory/presentation/add_medicine_screen.dart';
-import 'package:aptechka/features/inventory/presentation/inventory_screen.dart';
-import 'package:aptechka/features/inventory/presentation/medicine_detail_screen.dart';
+import 'package:aptechka/features/inventory/presentation/pharmacy_inventory_screen.dart';
+import 'package:aptechka/features/inventory/presentation/medicine_group_screen.dart';
+import 'package:aptechka/features/inventory/presentation/package_detail_screen.dart';
 import 'package:aptechka/features/reminders/presentation/reminders_screen.dart';
 import 'package:aptechka/features/scanner/presentation/barcode_scanner_screen.dart';
 import 'package:aptechka/features/settings/presentation/settings_screen.dart';
@@ -20,14 +21,17 @@ final appRouter = GoRouter(
       branches: [
         StatefulShellBranch(
           routes: [
-            GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+            GoRoute(
+              path: '/',
+              builder: (context, state) => const PharmaciesScreen(),
+            ),
           ],
         ),
         StatefulShellBranch(
           routes: [
             GoRoute(
               path: '/inventory',
-              builder: (context, state) => const InventoryScreen(),
+              builder: (context, state) => const PharmacyInventoryScreen(),
             ),
           ],
         ),
@@ -56,9 +60,15 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
+      path: '/medicine/group/:id',
+      builder: (context, state) =>
+          MedicineGroupScreen(packageId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
       path: '/medicine/:id',
       builder: (context, state) =>
-          MedicineDetailScreen(medicineId: state.pathParameters['id']!),
+          PackageDetailScreen(packageId: state.pathParameters['id']!),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

@@ -18,13 +18,15 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   final _activeIngredient = TextEditingController();
   final _dosage = TextEditingController();
   final _quantity = TextEditingController(text: '1');
-  final _location = TextEditingController(text: 'Домашняя аптечка');
+  final _location = TextEditingController();
+  final _afterOpeningDays = TextEditingController();
   final _reminderDose = TextEditingController(text: '1 таблетка');
   final DrugCatalogService _catalog = const DemoDrugCatalogService();
 
   String _form = 'Таблетки';
   String _unit = 'таблеток';
   DateTime? _expiryDate;
+  DateTime? _openedAt;
   String? _gtin;
   bool _createReminder = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 9, minute: 0);
@@ -37,6 +39,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     _dosage.dispose();
     _quantity.dispose();
     _location.dispose();
+    _afterOpeningDays.dispose();
     _reminderDose.dispose();
     super.dispose();
   }
@@ -90,13 +93,20 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     if (time != null) setState(() => _reminderTime = time);
   }
 
+  Future<void> _pickOpenedAt() async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _openedAt ?? now,
+      firstDate: DateTime(now.year - 10),
+      lastDate: now,
+      helpText: 'Дата вскрытия упаковки',
+    );
+    if (date != null) setState(() => _openedAt = date);
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_expiryDate == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Укажите срок годности')));
-      return;
-    }
     setState(() => _saving = true);
     try {
       await ref
@@ -108,8 +118,13 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
             dosage: _dosage.text,
             quantity: int.parse(_quantity.text),
             unit: _unit,
-            expiryDate: _expiryDate!,
+            expiryDate: _expiryDate,
             location: _location.text,
+            openedAt: _openedAt,
+            afterOpeningDays:
+                _openedAt == null || _afterOpeningDays.text.trim().isEmpty
+                ? null
+                : int.parse(_afterOpeningDays.text),
             gtin: _gtin,
             createReminder: _createReminder,
             reminderHour: _reminderTime.hour,
@@ -127,8 +142,14 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pharmacyName = ref
+        .watch(appControllerProvider)
+        .asData
+        ?.value
+        .selectedPharmacy
+        .name;
     return Scaffold(
-      appBar: AppBar(title: const Text('Новый препарат')),
+      appBar: AppBar(title: const Text('Новая упаковка')),
       body: SafeArea(
         top: false,
         child: Form(
@@ -140,6 +161,13 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
                 children: [
+                  if (pharmacyName != null) ...[
+                    Text(
+                      'В аптечку «$pharmacyName»',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Card(
                     color: Theme.of(context).colorScheme.primaryContainer,
                     child: Padding(
@@ -303,11 +331,11 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                     readOnly: true,
                     onTap: _pickExpiry,
                     decoration: InputDecoration(
-                      labelText: 'Срок годности *',
+                      labelText: 'Срок на упаковке',
                       hintText: 'Выберите дату',
                       suffixIcon: const Icon(Icons.calendar_today_outlined),
                       helperText: _expiryDate == null
-                          ? 'Если указан только месяц, выберите его последний день.'
+                          ? 'Если не знаете дату, оставьте поле пустым. Статус будет «неизвестен».'
                           : compactDate(_expiryDate!),
                     ),
                   ),
@@ -318,8 +346,37 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                     textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(
                       labelText: 'Место хранения *',
+                      hintText: 'Например, верхняя полка',
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _pickOpenedAt,
+                    icon: const Icon(Icons.event_outlined),
+                    label: Text(
+                      _openedAt == null
+                          ? 'Отметить дату вскрытия'
+                          : 'Вскрыта ${compactDate(_openedAt!)}',
+                    ),
+                  ),
+                  if (_openedAt != null) ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _afterOpeningDays,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Срок после вскрытия, дней',
+                        helperText: 'Внесите срок из инструкции к упаковке',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return null;
+                        final number = int.tryParse(value);
+                        return number == null || number <= 0
+                            ? 'Введите число больше 0'
+                            : null;
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 28),
                   Card(
                     child: Column(
@@ -329,11 +386,11 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                           onChanged: (value) =>
                               setState(() => _createReminder = value),
                           title: const Text(
-                            'Напоминать о приёме',
+                            'Добавить в расписание',
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                           subtitle: const Text(
-                            'Расписание сохранится вместе с препаратом',
+                            'В прототипе системные уведомления ещё не работают',
                           ),
                         ),
                         if (_createReminder) ...[
@@ -382,7 +439,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.check),
-            label: Text(_saving ? 'Сохраняем…' : 'Добавить в аптечку'),
+            label: Text(_saving ? 'Сохраняем…' : 'Добавить упаковку'),
           ),
         ),
       ),

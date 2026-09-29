@@ -36,4 +36,50 @@ void main() {
       MedicineStatus.okay,
     );
   });
+
+  test('earlier date after opening controls status', () {
+    final medicine = Medicine(
+      id: 'opened',
+      name: 'Капли',
+      form: 'Капли',
+      dosage: '0,1%',
+      quantity: 1,
+      unit: 'флакон',
+      expiryDate: DateTime(2027, 5, 1),
+      openedAt: DateTime(2026, 9, 1),
+      afterOpeningDays: 14,
+      location: 'Шкаф',
+    );
+    expect(medicine.statusAt(DateTime(2026, 9, 17)), MedicineStatus.expired);
+    expect(medicine.effectiveExpiryDate, DateTime(2026, 9, 15));
+  });
+
+  test('missing expiry or missing after-opening period stays unknown', () {
+    expect(
+      Medicine(
+        id: 'unknown',
+        name: 'Капли',
+        form: 'Капли',
+        dosage: '1%',
+        quantity: 1,
+        unit: 'флакон',
+        location: 'Шкаф',
+      ).statusAt(DateTime(2026, 9, 17)),
+      MedicineStatus.unknown,
+    );
+    expect(
+      Medicine(
+        id: 'opened-unknown',
+        name: 'Капли',
+        form: 'Капли',
+        dosage: '1%',
+        quantity: 1,
+        unit: 'флакон',
+        location: 'Шкаф',
+        expiryDate: DateTime(2027, 1, 1),
+        openedAt: DateTime(2026, 9, 1),
+      ).statusAt(DateTime(2026, 9, 17)),
+      MedicineStatus.unknown,
+    );
+  });
 }

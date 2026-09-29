@@ -39,12 +39,12 @@ class AppShell extends StatelessWidget {
                       NavigationRailDestination(
                         icon: Icon(Icons.home_outlined),
                         selectedIcon: Icon(Icons.home),
-                        label: Text('Главная'),
+                        label: Text('Аптечки'),
                       ),
                       NavigationRailDestination(
                         icon: Icon(Icons.medication_outlined),
                         selectedIcon: Icon(Icons.medication),
-                        label: Text('Аптечка'),
+                        label: Text('Содержимое'),
                       ),
                       NavigationRailDestination(
                         icon: Icon(Icons.schedule_outlined),
@@ -74,12 +74,12 @@ class AppShell extends StatelessWidget {
               NavigationDestination(
                 icon: Icon(Icons.home_outlined),
                 selectedIcon: Icon(Icons.home),
-                label: 'Главная',
+                label: 'Аптечки',
               ),
               NavigationDestination(
                 icon: Icon(Icons.medication_outlined),
                 selectedIcon: Icon(Icons.medication),
-                label: 'Аптечка',
+                label: 'Содержимое',
               ),
               NavigationDestination(
                 icon: Icon(Icons.schedule_outlined),
