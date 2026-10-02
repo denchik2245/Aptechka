@@ -1,0 +1,20 @@
+{
+  "identifier": "7731376812-MDLPGtins",
+  "publisher": "ООО \"Оператор-ЦРПТ\"",
+  "sourceUrl": "https://датамаркет.честныйзнак.рф/bi/opendata/7731376812-MDLPGtins",
+  "dataUrl": "https://датамаркет.честныйзнак.рф/bi/api/opendata/7731376812-MDLPGtins/data/data-20261001-structure-20240611.csv",
+  "fileName": "data-20261001-structure-20240611.csv",
+  "modified": "2026-10-01",
+  "validDate": "2026-10-01",
+  "sourceSha256": "8ae902b08581845bfc71e3c52b9618efcae368c409b565a951642e898dfb304b",
+  "sourceBytes": 49958395,
+  "recordCount": 74791,
+  "tradeNameCount": 10292,
+  "statuses": {
+    "Действующий": 68442,
+    "Недействующий": 6349
+  },
+  "coverage": "Complete publisher snapshot of medicines subject to mandatory marking; not every GRLS registration",
+  "doseField": "prod_d_name",
+  "formField": "prod_form_name"
+}

@@ -98,7 +98,14 @@ abstract final class AppTheme {
         side: BorderSide(
           color: isDark ? const Color(0xFF34443E) : AppColors.line,
         ),
-        labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+        selectedColor: colorScheme.secondaryContainer,
+        backgroundColor: colorScheme.surface,
+        checkmarkColor: colorScheme.onSecondaryContainer,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       ),
       dividerTheme: DividerThemeData(
         color: isDark ? const Color(0xFF2D3A35) : AppColors.line,

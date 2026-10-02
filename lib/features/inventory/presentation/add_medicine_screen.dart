@@ -1,6 +1,8 @@
 import 'package:aptechka/core/utils/date_labels.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
 import 'package:aptechka/features/inventory/data/drug_catalog_service.dart';
+import 'package:aptechka/features/inventory/presentation/drug_name_field.dart';
+import 'package:aptechka/features/inventory/presentation/widgets/drug_photo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +23,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   final _location = TextEditingController();
   final _afterOpeningDays = TextEditingController();
   final _reminderDose = TextEditingController(text: '1 таблетка');
-  final DrugCatalogService _catalog = const DemoDrugCatalogService();
+  DrugCatalogEntry? _selectedEntry;
 
   String _form = 'Таблетки';
   String _unit = 'таблеток';
@@ -31,6 +33,18 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   bool _createReminder = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 9, minute: 0);
   bool _saving = false;
+  bool _scanning = false;
+  int _catalogRevision = 0;
+
+  bool get _selectedVariantMatches {
+    final entry = _selectedEntry;
+    return entry != null &&
+        entry.name == _name.text &&
+        entry.activeIngredient == _activeIngredient.text &&
+        entry.form == _form &&
+        entry.dosage == _dosage.text &&
+        entry.unit == _unit;
+  }
 
   @override
   void dispose() {
@@ -45,29 +59,81 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   }
 
   Future<void> _scan() async {
-    final gtin = await context.push<String>('/scanner');
-    if (gtin == null || !mounted) return;
-    final entry = await _catalog.findByGtin(gtin);
-    if (!mounted) return;
+    if (_scanning) return;
+    final revision = ++_catalogRevision;
+    setState(() => _scanning = true);
+    try {
+      final gtin = await context.push<String>('/scanner');
+      if (gtin == null || !mounted) return;
+      DrugCatalogEntry? entry;
+      var unavailable = false;
+      try {
+        entry = await ref.read(drugCatalogServiceProvider).findByGtin(gtin);
+      } catch (_) {
+        unavailable = true;
+      }
+      if (!mounted || revision != _catalogRevision) return;
+      setState(() {
+        _gtin = gtin;
+        _selectedEntry = entry;
+        _name.text = entry?.name ?? '';
+        _activeIngredient.text = entry?.activeIngredient ?? '';
+        _form = entry?.form ?? 'Таблетки';
+        _dosage.text = entry?.dosage ?? '';
+        _unit = entry?.unit ?? 'таблеток';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            unavailable
+                ? 'Код считан, справочник не загрузился. Заполните характеристики вручную.'
+                : entry == null
+                ? 'Код считан, совпадение не найдено. Заполните характеристики вручную.'
+                : 'Препарат найден: ${ref.read(drugCatalogServiceProvider).sourceLabel}.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _scanning = false);
+    }
+  }
+
+  void _selectEntry(DrugCatalogEntry entry) {
+    _catalogRevision++;
     setState(() {
-      _gtin = gtin;
-      if (entry != null) {
-        _name.text = entry.name;
-        _activeIngredient.text = entry.activeIngredient;
-        _form = entry.form;
-        _dosage.text = entry.dosage;
-        _unit = entry.unit;
+      _selectedEntry = entry;
+      // A name match does not identify the physical package's barcode.
+      _gtin = null;
+      _name.text = entry.name;
+      _activeIngredient.text = entry.activeIngredient;
+      _form = entry.form;
+      _dosage.text = entry.dosage;
+      _unit = entry.unit;
+    });
+  }
+
+  void _nameChanged(String _) {
+    _catalogRevision++;
+    final previous = _selectedEntry;
+    setState(() {
+      _gtin = null;
+      _selectedEntry = null;
+      // Do not carry automatically filled characteristics to a different name.
+      // Preserve fields the user has already corrected manually.
+      if (previous != null) {
+        if (_activeIngredient.text == previous.activeIngredient) {
+          _activeIngredient.clear();
+        }
+        if (_dosage.text == previous.dosage) _dosage.clear();
+        if (_form == previous.form) _form = 'Таблетки';
+        if (_unit == previous.unit) _unit = 'таблеток';
       }
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          entry == null
-              ? 'Код считан. Заполните характеристики препарата.'
-              : 'Препарат найден в демонстрационном справочнике.',
-        ),
-      ),
-    );
+  }
+
+  void _characteristicChanged(String _) {
+    _catalogRevision++;
+    setState(() => _gtin = null);
   }
 
   Future<void> _pickExpiry() async {
@@ -107,6 +173,16 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final selected = _selectedEntry;
+    final matched =
+        selected != null &&
+        selected.name == _name.text &&
+        selected.activeIngredient == _activeIngredient.text &&
+        selected.form == _form &&
+        selected.dosage == _dosage.text &&
+        selected.unit == _unit;
+    String? catalogValue(String? value) =>
+        value == null || value.isEmpty ? null : value;
     setState(() => _saving = true);
     try {
       await ref
@@ -126,6 +202,20 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                 ? null
                 : int.parse(_afterOpeningDays.text),
             gtin: _gtin,
+            catalogEntryId: matched ? selected.id : null,
+            manufacturer: matched ? catalogValue(selected.manufacturer) : null,
+            packageDescription: matched
+                ? catalogValue(selected.packageDescription)
+                : null,
+            registrationId: matched
+                ? catalogValue(selected.registrationId)
+                : null,
+            registrationStatus: matched
+                ? catalogValue(selected.registrationStatus)
+                : null,
+            catalogVersion: matched
+                ? catalogValue(selected.sourceVersion)
+                : null,
             createReminder: _createReminder,
             reminderHour: _reminderTime.hour,
             reminderMinute: _reminderTime.minute,
@@ -195,7 +285,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                             ),
                           ),
                           IconButton.filled(
-                            onPressed: _scan,
+                            onPressed: _scanning ? null : _scan,
                             tooltip: 'Открыть сканер',
                             icon: const Icon(Icons.camera_alt_outlined),
                           ),
@@ -206,7 +296,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                   if (_gtin != null) ...[
                     const SizedBox(height: 10),
                     Text(
-                      'Считан GTIN: $_gtin',
+                      'GTIN с упаковки: $_gtin',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
@@ -216,18 +306,38 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(
+                  DrugNameField(
                     controller: _name,
                     validator: _required,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      labelText: 'Название *',
-                      hintText: 'Например, Ибупрофен',
-                    ),
+                    onChanged: _nameChanged,
+                    onSelected: _selectEntry,
                   ),
+                  if (_selectedEntry != null) ...[
+                    if (_selectedVariantMatches)
+                      DrugPhotoPanel(gtin: _selectedEntry!.gtin),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        'Из справочника: ${_selectedEntry!.name} · ${_selectedEntry!.form} · ${_selectedEntry!.dosageLabel}.${_selectedEntry!.manufacturer.isNotEmpty ? '\nПроизводитель: ${_selectedEntry!.manufacturer}.' : ''}${_selectedEntry!.packageDescription.isNotEmpty ? '\nУпаковка: ${_selectedEntry!.packageDescription}.' : ''}\nХарактеристики можно изменить. Сверьте их с упаковкой; количество и даты укажите отдельно.${_selectedEntry!.isInactive ? '\nВ источнике: ${_selectedEntry!.registrationStatus}.' : ''}',
+                        style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   TextFormField(
+                    key: const ValueKey('drug-ingredient-input'),
                     controller: _activeIngredient,
+                    maxLines: 2,
+                    onChanged: _characteristicChanged,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(
                       labelText: 'Действующее вещество',
@@ -240,35 +350,51 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
+                          key: const ValueKey('drug-form-input'),
+                          isExpanded: true,
                           initialValue: _form,
                           decoration: const InputDecoration(labelText: 'Форма'),
                           items:
-                              const [
+                              {
                                     'Таблетки',
                                     'Капсулы',
                                     'Раствор',
                                     'Спрей',
                                     'Мазь',
                                     'Другое',
-                                  ]
+                                    _form,
+                                  }
                                   .map(
                                     (value) => DropdownMenuItem(
                                       value: value,
-                                      child: Text(value),
+                                      child: Text(
+                                        value,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   )
                                   .toList(),
-                          onChanged: (value) => setState(() => _form = value!),
+                          onChanged: (value) => setState(() {
+                            _form = value!;
+                            _catalogRevision++;
+                            _gtin = null;
+                          }),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: TextFormField(
+                          key: const ValueKey('drug-dosage-input'),
                           controller: _dosage,
-                          validator: _required,
+                          onChanged: _characteristicChanged,
+                          maxLines: 2,
                           decoration: const InputDecoration(
-                            labelText: 'Дозировка *',
+                            labelText: 'Дозировка',
                             hintText: '200 мг',
+                            helperText:
+                                'Если не указана на упаковке, оставьте пустой',
+                            helperMaxLines: 3,
                           ),
                         ),
                       ),
@@ -285,6 +411,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                     children: [
                       Expanded(
                         child: TextFormField(
+                          key: const ValueKey('package-quantity-input'),
                           controller: _quantity,
                           keyboardType: TextInputType.number,
                           validator: (value) {
@@ -301,6 +428,8 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: DropdownButtonFormField<String>(
+                          key: const ValueKey('package-unit-input'),
+                          isExpanded: true,
                           initialValue: _unit,
                           decoration: const InputDecoration(
                             labelText: 'Единица',
@@ -317,11 +446,19 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                                   .map(
                                     (value) => DropdownMenuItem(
                                       value: value,
-                                      child: Text(value),
+                                      child: Text(
+                                        value,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   )
                                   .toList(),
-                          onChanged: (value) => setState(() => _unit = value!),
+                          onChanged: (value) => setState(() {
+                            _unit = value!;
+                            _catalogRevision++;
+                            _gtin = null;
+                          }),
                         ),
                       ),
                     ],
@@ -341,6 +478,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
+                    key: const ValueKey('package-location-input'),
                     controller: _location,
                     validator: _required,
                     textCapitalization: TextCapitalization.sentences,

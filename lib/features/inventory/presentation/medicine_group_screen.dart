@@ -40,7 +40,10 @@ class MedicineGroupScreen extends ConsumerWidget {
                   ..sort((a, b) {
                     int priority(Medicine item) {
                       if (item.quantity == 0) return 4;
-                      return switch (item.statusAt(DateTime.now())) {
+                      return switch (item.statusAt(
+                        DateTime.now(),
+                        warningDays: state.settings.expiryWarningDays,
+                      )) {
                         MedicineStatus.okay => 0,
                         MedicineStatus.expiringSoon => 1,
                         MedicineStatus.unknown => 2,
@@ -77,7 +80,7 @@ class MedicineGroupScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${representative.dosage} · ${representative.form}',
+                      '${representative.dosageLabel} · ${representative.form}',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 24),
@@ -100,6 +103,7 @@ class MedicineGroupScreen extends ConsumerWidget {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _PackageCard(
                           package: package,
+                          warningDays: state.settings.expiryWarningDays,
                           onTap: () => context.push('/medicine/${package.id}'),
                         ),
                       ),
@@ -116,14 +120,19 @@ class MedicineGroupScreen extends ConsumerWidget {
 }
 
 class _PackageCard extends StatelessWidget {
-  const _PackageCard({required this.package, required this.onTap});
+  const _PackageCard({
+    required this.package,
+    required this.onTap,
+    required this.warningDays,
+  });
 
   final Medicine package;
+  final int warningDays;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final status = package.statusAt(DateTime.now());
+    final status = package.statusAt(DateTime.now(), warningDays: warningDays);
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(

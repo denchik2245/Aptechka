@@ -16,6 +16,12 @@ class Medicine {
     this.activeIngredient,
     this.gtin,
     this.notes,
+    this.catalogEntryId,
+    this.manufacturer,
+    this.packageDescription,
+    this.registrationId,
+    this.registrationStatus,
+    this.catalogVersion,
   });
 
   final String id;
@@ -32,6 +38,13 @@ class Medicine {
   final String location;
   final String? gtin;
   final String? notes;
+  final String? catalogEntryId;
+  final String? manufacturer;
+  final String? packageDescription;
+  final String? registrationId;
+  final String? registrationStatus;
+  final String? catalogVersion;
+  String get dosageLabel => dosage.isEmpty ? 'Дозировка не указана' : dosage;
 
   String get groupKey =>
       '${name.trim().toLowerCase()}|${form.trim().toLowerCase()}|${dosage.trim().toLowerCase()}';
@@ -55,14 +68,14 @@ class Medicine {
   bool get hasIncompleteExpiryData =>
       expiryDate == null || (openedAt != null && afterOpeningDays == null);
 
-  MedicineStatus statusAt(DateTime now) {
+  MedicineStatus statusAt(DateTime now, {int warningDays = 30}) {
     final today = DateTime(now.year, now.month, now.day);
     final expiry = effectiveExpiryDate;
     if (expiry != null && expiry.isBefore(today)) return MedicineStatus.expired;
     if (hasIncompleteExpiryData || expiry == null) {
       return MedicineStatus.unknown;
     }
-    if (expiry.difference(today).inDays <= 30) {
+    if (expiry.difference(today).inDays <= warningDays) {
       return MedicineStatus.expiringSoon;
     }
     return MedicineStatus.okay;
@@ -76,6 +89,8 @@ class Medicine {
   }
 
   Medicine copyWith({
+    String? id,
+    String? pharmacyId,
     int? quantity,
     String? location,
     DateTime? expiryDate,
@@ -85,8 +100,8 @@ class Medicine {
     int? afterOpeningDays,
     bool clearAfterOpeningDays = false,
   }) => Medicine(
-    id: id,
-    pharmacyId: pharmacyId,
+    id: id ?? this.id,
+    pharmacyId: pharmacyId ?? this.pharmacyId,
     name: name,
     activeIngredient: activeIngredient,
     form: form,
@@ -101,6 +116,12 @@ class Medicine {
     location: location ?? this.location,
     gtin: gtin,
     notes: notes,
+    catalogEntryId: catalogEntryId,
+    manufacturer: manufacturer,
+    packageDescription: packageDescription,
+    registrationId: registrationId,
+    registrationStatus: registrationStatus,
+    catalogVersion: catalogVersion,
   );
 
   Map<String, Object?> toJson() => {
@@ -118,6 +139,12 @@ class Medicine {
     'location': location,
     'gtin': gtin,
     'notes': notes,
+    'catalogEntryId': catalogEntryId,
+    'manufacturer': manufacturer,
+    'packageDescription': packageDescription,
+    'registrationId': registrationId,
+    'registrationStatus': registrationStatus,
+    'catalogVersion': catalogVersion,
   };
 
   factory Medicine.fromJson(Map<String, Object?> json) => Medicine(
@@ -139,5 +166,11 @@ class Medicine {
     location: json['location']! as String,
     gtin: json['gtin'] as String?,
     notes: json['notes'] as String?,
+    catalogEntryId: json['catalogEntryId'] as String?,
+    manufacturer: json['manufacturer'] as String?,
+    packageDescription: json['packageDescription'] as String?,
+    registrationId: json['registrationId'] as String?,
+    registrationStatus: json['registrationStatus'] as String?,
+    catalogVersion: json['catalogVersion'] as String?,
   );
 }

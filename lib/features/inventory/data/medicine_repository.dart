@@ -12,21 +12,77 @@ abstract interface class MedicineRepository {
 }
 
 class LocalMedicineRepository implements MedicineRepository {
-  LocalMedicineRepository(this._preferences);
+  LocalMedicineRepository(this._preferences, {this.profileScopeId = 'guest'});
 
-  static const _storageKey = 'aptechka_state_v1';
+  final String profileScopeId;
+
+  String get _storageKey => profileScopeId == 'guest'
+      ? 'aptechka_state_v1'
+      : 'aptechka_profile_${profileScopeId}_state_v1';
   final SharedPreferences _preferences;
 
   @override
   Future<AppState> load() async {
     final raw = _preferences.getString(_storageKey);
-    if (raw == null) return _seedState();
-    return AppState.fromJson(Map<String, Object?>.from(jsonDecode(raw) as Map));
+    if (raw == null) {
+      if (profileScopeId == 'guest') {
+        final seed = _seedState();
+        await save(seed);
+        return seed;
+      }
+      final pharmacyId = 'home:$profileScopeId';
+      final initial = AppState(
+        profileScopeId: profileScopeId,
+        pharmacies: [
+          Pharmacy(
+            id: pharmacyId,
+            name: 'Моя аптечка',
+            ownerLabel: 'Вы',
+            isShared: false,
+            canEdit: true,
+            ownerAccountId: profileScopeId,
+          ),
+        ],
+        selectedPharmacyId: pharmacyId,
+        medicines: const [],
+        reminders: const [],
+        intakeRecords: const [],
+      );
+      await save(initial);
+      return initial;
+    }
+    final loaded = AppState.fromJson(
+      Map<String, Object?>.from(jsonDecode(raw) as Map),
+    );
+    if (loaded.profileScopeId != profileScopeId) {
+      throw StateError('Данные принадлежат другому профилю');
+    }
+    final defaultId = loaded.settings.defaultPharmacyId;
+    return defaultId != null &&
+            loaded.pharmacies.any((item) => item.id == defaultId)
+        ? loaded.copyWith(selectedPharmacyId: defaultId)
+        : loaded;
   }
 
   @override
   Future<void> save(AppState state) async {
-    await _preferences.setString(_storageKey, jsonEncode(state.toJson()));
+    if (state.profileScopeId != profileScopeId) {
+      throw StateError('Нельзя сохранить записи в другом профиле');
+    }
+    final saved = await _preferences.setString(
+      _storageKey,
+      jsonEncode(state.toJson()),
+    );
+    if (!saved) throw StateError('Не удалось сохранить данные на устройстве');
+  }
+
+  Future<void> deleteProfileData() async {
+    if (profileScopeId == 'guest') {
+      throw StateError('Гостевые данные сохраняются');
+    }
+    if (!await _preferences.remove(_storageKey)) {
+      throw StateError('Не удалось удалить записи профиля');
+    }
   }
 
   AppState _seedState() {

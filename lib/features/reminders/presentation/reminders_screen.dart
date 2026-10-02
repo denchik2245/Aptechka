@@ -1,4 +1,6 @@
-import 'package:aptechka/core/theme/app_colors.dart';
+import 'package:aptechka/features/medicines/domain/medicine.dart';
+import 'package:aptechka/features/inventory/presentation/widgets/package_status_badge.dart';
+import 'package:go_router/go_router.dart';
 import 'package:aptechka/core/widgets/async_value_view.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
 import 'package:aptechka/features/inventory/domain/app_state.dart';
@@ -32,38 +34,12 @@ class _ReminderContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (state.reminders.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.notifications_none,
-                size: 56,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Нет напоминаний',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Расписание можно добавить при создании препарата.',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final reminders = [...state.reminders]
-      ..sort(
-        (a, b) => (a.hour * 60 + a.minute).compareTo(b.hour * 60 + b.minute),
-      );
+    final reminders = state.settings.intakeSchedule
+        ? state.reminders.where((item) => item.enabled).toList()
+        : <MedicationReminder>[];
+    reminders.sort(
+      (a, b) => (a.hour * 60 + a.minute).compareTo(b.hour * 60 + b.minute),
+    );
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
@@ -90,8 +66,38 @@ class _ReminderContent extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
+            _AttentionSummary(state: state),
+            const SizedBox(height: 24),
             Text('Сегодня', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
+            if (reminders.isEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.settings.intakeSchedule
+                            ? 'Нет активных расписаний'
+                            : 'Расписание на паузе',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        state.reminders.isEmpty
+                            ? 'Расписание можно добавить при создании упаковки.'
+                            : 'Включите расписание в настройках. История приёма сохранена.',
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () => context.go('/settings'),
+                        child: const Text('Настроить расписание'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ...reminders.map((reminder) {
               final medicine = state.medicines
                   .where((item) => item.id == reminder.medicineId)
@@ -113,16 +119,17 @@ class _ReminderContent extends ConsumerWidget {
                               height: 56,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: status == IntakeStatus.taken
-                                    ? AppColors.successSoft
-                                    : Theme.of(context)
-                                          .colorScheme
-                                          .primaryContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Text(
                                 reminder.timeLabel,
-                                style: const TextStyle(
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -139,7 +146,9 @@ class _ReminderContent extends ConsumerWidget {
                                         .titleMedium,
                                   ),
                                   const SizedBox(height: 4),
-                                  Text('${reminder.dose} · ${medicine.dosage}'),
+                                  Text(
+                                    '${reminder.dose} · ${medicine.dosageLabel}',
+                                  ),
                                   if (status != null) ...[
                                     const SizedBox(height: 8),
                                     Text(
@@ -148,8 +157,12 @@ class _ReminderContent extends ConsumerWidget {
                                           : 'Пропущено',
                                       style: TextStyle(
                                         color: status == IntakeStatus.taken
-                                            ? AppColors.success
-                                            : AppColors.warning,
+                                            ? Theme.of(context)
+                                                  .colorScheme
+                                                  .primary
+                                            : Theme.of(context)
+                                                  .colorScheme
+                                                  .tertiary,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -213,5 +226,98 @@ class _ReminderContent extends ConsumerWidget {
       }
     }
     return null;
+  }
+}
+
+class _AttentionSummary extends StatelessWidget {
+  const _AttentionSummary({required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = state.settings;
+    final entries = state.medicines.where((item) {
+      final status = item.statusAt(
+        DateTime.now(),
+        warningDays: settings.expiryWarningDays,
+      );
+      return (settings.expiryAlerts &&
+              item.quantity > 0 &&
+              status != MedicineStatus.okay) ||
+          (settings.stockAlerts && item.quantity <= settings.lowStockThreshold);
+    }).toList()..sort((a, b) => a.name.compareTo(b.name));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Проверить аптечки',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        const Text('Предупреждения по всем аптечкам на этом устройстве'),
+        const SizedBox(height: 12),
+        if (entries.isEmpty)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.check_circle_outline),
+              title: Text(
+                !settings.expiryAlerts && !settings.stockAlerts
+                    ? 'Предупреждения выключены'
+                    : 'По включённым проверкам всё спокойно',
+              ),
+              subtitle: Text(
+                !settings.expiryAlerts && !settings.stockAlerts
+                    ? 'Включите нужные проверки в настройках.'
+                    : 'Нет упаковок, требующих внимания.',
+              ),
+            ),
+          ),
+        ...entries.map((item) {
+          final pharmacy = state.pharmacies
+              .where((p) => p.id == item.pharmacyId)
+              .firstOrNull;
+          final status = item.statusAt(
+            DateTime.now(),
+            warningDays: settings.expiryWarningDays,
+          );
+          final reasons = <String>[
+            if (settings.expiryAlerts &&
+                item.quantity > 0 &&
+                status != MedicineStatus.okay)
+              PackageStatusBadge.labelFor(status),
+            if (settings.stockAlerts &&
+                item.quantity <= settings.lowStockThreshold)
+              item.quantity == 0
+                  ? 'Нет в наличии'
+                  : 'Малый остаток: ${item.quantity} ${item.unit}',
+          ];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Card(
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                leading: Icon(
+                  Icons.info_outline,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                title: Text(
+                  item.name,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                subtitle: Text(
+                  '${pharmacy?.name ?? ''} · ${item.location}\n${reasons.join(' · ')}',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/medicine/${item.id}'),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
   }
 }

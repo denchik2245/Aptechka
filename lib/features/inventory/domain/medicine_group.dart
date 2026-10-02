@@ -8,10 +8,16 @@ class MedicineGroup {
   Medicine get representative => packages.first;
   String get name => representative.name;
   String get form => representative.form;
-  String get dosage => representative.dosage;
+  String get dosage => representative.dosageLabel;
 
-  int get packagesNeedingAttention => packages
-      .where((item) => item.statusAt(DateTime.now()) != MedicineStatus.okay)
+  int get packagesNeedingAttention => attentionCount();
+
+  int attentionCount({int warningDays = 30}) => packages
+      .where(
+        (item) =>
+            item.statusAt(DateTime.now(), warningDays: warningDays) !=
+            MedicineStatus.okay,
+      )
       .length;
 
   String get locationSummary {

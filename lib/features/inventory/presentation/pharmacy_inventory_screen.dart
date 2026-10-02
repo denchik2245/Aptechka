@@ -7,6 +7,7 @@ import 'package:aptechka/features/medicines/domain/medicine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:aptechka/features/settings/domain/app_settings.dart';
 
 enum InventoryFilter { all, expiring, expired, empty }
 
@@ -23,6 +24,7 @@ class _PharmacyInventoryScreenState
   final _searchController = TextEditingController();
   InventoryFilter _filter = InventoryFilter.all;
   String? _location;
+  String? _lastProfileScope;
 
   @override
   void dispose() {
@@ -90,11 +92,20 @@ class _PharmacyInventoryScreenState
         child: AsyncValueView(
           value: appState,
           data: (state) {
+            if (_lastProfileScope != state.profileScopeId) {
+              _lastProfileScope = state.profileScopeId;
+              _searchController.clear();
+              _filter = InventoryFilter.all;
+              _location = null;
+            }
             final pharmacy = state.selectedPharmacy;
             final allPackages = state.medicinesIn(pharmacy.id);
             final locations =
                 allPackages.map((item) => item.location).toSet().toList()
                   ..sort();
+            final effectiveLocation = locations.contains(_location)
+                ? _location
+                : null;
             final query = _searchController.text.trim().toLowerCase();
             final filtered = allPackages.where((item) {
               final matchesQuery =
@@ -103,8 +114,12 @@ class _PharmacyInventoryScreenState
                   (item.activeIngredient?.toLowerCase().contains(query) ??
                       false);
               final matchesLocation =
-                  _location == null || item.location == _location;
-              final status = item.statusAt(DateTime.now());
+                  effectiveLocation == null ||
+                  item.location == effectiveLocation;
+              final status = item.statusAt(
+                DateTime.now(),
+                warningDays: state.settings.expiryWarningDays,
+              );
               final matchesFilter = switch (_filter) {
                 InventoryFilter.all => true,
                 InventoryFilter.expiring =>
@@ -115,147 +130,188 @@ class _PharmacyInventoryScreenState
               return matchesQuery && matchesLocation && matchesFilter;
             }).toList();
             final groups = groupMedicines(filtered);
+            if (state.settings.inventorySort == InventorySort.expiry) {
+              groups.sort((a, b) {
+                DateTime? nearest(MedicineGroup group) => group.packages
+                    .map((item) => item.effectiveExpiryDate)
+                    .whereType<DateTime>()
+                    .fold<DateTime?>(
+                      null,
+                      (date, next) =>
+                          date == null || next.isBefore(date) ? next : date,
+                    );
+                final aDate = nearest(a);
+                final bDate = nearest(b);
+                if (aDate == null && bDate == null) {
+                  return a.name.compareTo(b.name);
+                }
+                if (aDate == null) return 1;
+                if (bDate == null) return -1;
+                final byDate = aDate.compareTo(bDate);
+                return byDate != 0 ? byDate : a.name.compareTo(b.name);
+              });
+            }
             final hasFilters =
                 query.isNotEmpty ||
                 _filter != InventoryFilter.all ||
-                _location != null;
+                effectiveLocation != null;
 
             return Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 820),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextButton.icon(
-                            onPressed: () => _choosePharmacy(state),
-                            icon: Icon(
-                              pharmacy.isShared
-                                  ? Icons.group_outlined
-                                  : Icons.home_outlined,
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: () => _choosePharmacy(state),
+                                  icon: Icon(
+                                    pharmacy.isShared
+                                        ? Icons.group_outlined
+                                        : Icons.home_outlined,
+                                  ),
+                                  label: Text(pharmacy.name),
+                                  iconAlignment: IconAlignment.end,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Содержимое аптечки',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${russianCount(allPackages.length, 'упаковка', 'упаковки', 'упаковок')} · ${russianCount(groupMedicines(allPackages).length, 'препарат', 'препарата', 'препаратов')}',
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Прототип · данные только на этом устройстве',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: 20),
+                                TextField(
+                                  controller: _searchController,
+                                  onChanged: (_) => setState(() {}),
+                                  textInputAction: TextInputAction.search,
+                                  decoration: InputDecoration(
+                                    labelText: 'Поиск лекарства',
+                                    hintText: 'Название или вещество',
+                                    prefixIcon: const Icon(Icons.search),
+                                    suffixIcon: query.isEmpty
+                                        ? null
+                                        : IconButton(
+                                            tooltip: 'Очистить поиск',
+                                            onPressed: () => setState(
+                                              _searchController.clear,
+                                            ),
+                                            icon: const Icon(Icons.close),
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            label: Text(pharmacy.name),
-                            iconAlignment: IconAlignment.end,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Содержимое аптечки',
-                            style: Theme.of(context).textTheme.headlineMedium,
+                          const SizedBox(height: 14),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _filterChip('Все', InventoryFilter.all),
+                                _filterChip(
+                                  'Срок истекает',
+                                  InventoryFilter.expiring,
+                                ),
+                                _filterChip(
+                                  'Срок истёк',
+                                  InventoryFilter.expired,
+                                ),
+                                _filterChip(
+                                  'Нет в наличии',
+                                  InventoryFilter.empty,
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${russianCount(allPackages.length, 'упаковка', 'упаковки', 'упаковок')} · ${russianCount(groupMedicines(allPackages).length, 'препарат', 'препарата', 'препаратов')}',
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Прототип · данные только на этом устройстве',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          const SizedBox(height: 20),
-                          TextField(
-                            controller: _searchController,
-                            onChanged: (_) => setState(() {}),
-                            textInputAction: TextInputAction.search,
-                            decoration: InputDecoration(
-                              labelText: 'Поиск лекарства',
-                              hintText: 'Название или вещество',
-                              prefixIcon: const Icon(Icons.search),
-                              suffixIcon: query.isEmpty
-                                  ? null
-                                  : IconButton(
-                                      tooltip: 'Очистить поиск',
-                                      onPressed: () =>
-                                          setState(_searchController.clear),
-                                      icon: const Icon(Icons.close),
+                          if (locations.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                              child: DropdownButtonFormField<String?>(
+                                key: ValueKey(
+                                  '${state.selectedPharmacyId}:$effectiveLocation',
+                                ),
+                                initialValue: effectiveLocation,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Место хранения',
+                                  prefixIcon: Icon(Icons.place_outlined),
+                                ),
+                                items: [
+                                  const DropdownMenuItem<String?>(
+                                    value: null,
+                                    child: Text('Все места'),
+                                  ),
+                                  ...locations.map(
+                                    (place) => DropdownMenuItem<String?>(
+                                      value: place,
+                                      child: Text(
+                                        place,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        children: [
-                          _filterChip('Все', InventoryFilter.all),
-                          _filterChip(
-                            'Срок истекает',
-                            InventoryFilter.expiring,
-                          ),
-                          _filterChip('Срок истёк', InventoryFilter.expired),
-                          _filterChip('Нет в наличии', InventoryFilter.empty),
-                        ],
-                      ),
-                    ),
-                    if (locations.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                        child: DropdownButtonFormField<String?>(
-                          key: ValueKey(state.selectedPharmacyId),
-                          initialValue: locations.contains(_location)
-                              ? _location
-                              : null,
-                          decoration: const InputDecoration(
-                            labelText: 'Место хранения',
-                            prefixIcon: Icon(Icons.place_outlined),
-                          ),
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text('Все места'),
-                            ),
-                            ...locations.map(
-                              (place) => DropdownMenuItem<String?>(
-                                value: place,
-                                child: Text(place),
+                                  ),
+                                ],
+                                onChanged: (value) =>
+                                    setState(() => _location = value),
                               ),
                             ),
-                          ],
-                          onChanged: (value) =>
-                              setState(() => _location = value),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    ),
+                    if (groups.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _EmptyState(
+                          hasFilters: hasFilters,
+                          pharmacyName: pharmacy.name,
+                          canEdit: pharmacy.canEdit,
+                          onReset: _clearFilters,
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
+                        sliver: SliverList.separated(
+                          itemCount: groups.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final group = groups[index];
+                            return _MedicineGroupCard(
+                              group: group,
+                              warningDays: state.settings.expiryWarningDays,
+                              onTap: () => context.push(
+                                group.packages.length == 1
+                                    ? '/medicine/${group.representative.id}'
+                                    : '/medicine/group/${group.representative.id}',
+                              ),
+                            );
+                          },
                         ),
                       ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: groups.isEmpty
-                          ? _EmptyState(
-                              hasFilters: hasFilters,
-                              pharmacyName: pharmacy.name,
-                              canEdit: pharmacy.canEdit,
-                              onReset: _clearFilters,
-                            )
-                          : ListView.separated(
-                              key: ValueKey(pharmacy.id),
-                              padding: const EdgeInsets.fromLTRB(
-                                20,
-                                4,
-                                20,
-                                120,
-                              ),
-                              itemCount: groups.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 10),
-                              itemBuilder: (context, index) {
-                                final group = groups[index];
-                                return _MedicineGroupCard(
-                                  group: group,
-                                  onTap: () => context.push(
-                                    group.packages.length == 1
-                                        ? '/medicine/${group.representative.id}'
-                                        : '/medicine/group/${group.representative.id}',
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
                   ],
                 ),
               ),
@@ -274,26 +330,36 @@ class _PharmacyInventoryScreenState
     );
   }
 
-  Widget _filterChip(String label, InventoryFilter filter) => Padding(
-    padding: const EdgeInsets.only(right: 8),
-    child: FilterChip(
+  Widget _filterChip(String label, InventoryFilter filter) {
+    final scheme = Theme.of(context).colorScheme;
+    final selected = _filter == filter;
+    return FilterChip(
       label: Text(label),
-      selected: _filter == filter,
+      labelStyle: TextStyle(
+        color: selected ? scheme.onSecondaryContainer : scheme.onSurface,
+        fontWeight: FontWeight.w600,
+      ),
+      selected: selected,
       onSelected: (_) => setState(() => _filter = filter),
-    ),
-  );
+    );
+  }
 }
 
 class _MedicineGroupCard extends StatelessWidget {
-  const _MedicineGroupCard({required this.group, required this.onTap});
+  const _MedicineGroupCard({
+    required this.group,
+    required this.onTap,
+    required this.warningDays,
+  });
 
   final MedicineGroup group;
+  final int warningDays;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final count = group.packages.length;
-    final attention = group.packagesNeedingAttention;
+    final attention = group.attentionCount(warningDays: warningDays);
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -368,7 +434,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.fromLTRB(32, 32, 32, 120),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

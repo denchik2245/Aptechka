@@ -1,3 +1,4 @@
+import 'package:aptechka/features/accounts/presentation/account_screen.dart';
 import 'package:aptechka/features/home/presentation/pharmacies_screen.dart';
 import 'package:aptechka/features/inventory/presentation/add_medicine_screen.dart';
 import 'package:aptechka/features/inventory/presentation/pharmacy_inventory_screen.dart';
@@ -52,6 +53,16 @@ final appRouter = GoRouter(
           ],
         ),
       ],
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/account',
+      builder: (context, state) => const AccountScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/account/privacy',
+      builder: (context, state) => const AccountPrivacyScreen(),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

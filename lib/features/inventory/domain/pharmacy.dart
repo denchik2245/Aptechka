@@ -5,6 +5,7 @@ class Pharmacy {
     required this.ownerLabel,
     required this.isShared,
     required this.canEdit,
+    this.ownerAccountId,
   });
 
   final String id;
@@ -12,6 +13,16 @@ class Pharmacy {
   final String ownerLabel;
   final bool isShared;
   final bool canEdit;
+  final String? ownerAccountId;
+
+  Pharmacy withOwner(String accountId) => Pharmacy(
+    id: id,
+    name: name,
+    ownerLabel: 'Вы',
+    isShared: isShared,
+    canEdit: canEdit,
+    ownerAccountId: accountId,
+  );
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -19,6 +30,7 @@ class Pharmacy {
     'ownerLabel': ownerLabel,
     'isShared': isShared,
     'canEdit': canEdit,
+    'ownerAccountId': ownerAccountId,
   };
 
   factory Pharmacy.fromJson(Map<String, Object?> json) => Pharmacy(
@@ -27,5 +39,6 @@ class Pharmacy {
     ownerLabel: json['ownerLabel'] as String? ?? 'Вы',
     isShared: json['isShared'] as bool? ?? false,
     canEdit: json['canEdit'] as bool? ?? true,
+    ownerAccountId: json['ownerAccountId'] as String?,
   );
 }

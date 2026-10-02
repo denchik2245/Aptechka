@@ -1,3 +1,4 @@
+import 'package:aptechka/features/accounts/application/account_controller.dart';
 import 'package:aptechka/core/widgets/async_value_view.dart';
 import 'package:aptechka/core/utils/russian_count.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
@@ -68,9 +69,29 @@ class PharmaciesScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Мои аптечки',
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => context.push('/account'),
+                        tooltip: 'Аккаунт',
+                        icon: const Icon(Icons.account_circle_outlined),
+                      ),
+                    ],
+                  ),
                   Text(
-                    'Мои аптечки',
-                    style: Theme.of(context).textTheme.headlineMedium,
+                    ref
+                            .watch(localAccountsProvider)
+                            .asData
+                            ?.value
+                            .active
+                            ?.name ??
+                        'Без аккаунта · гостевые записи',
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -141,7 +162,7 @@ class _PrototypeNotice extends StatelessWidget {
         const SizedBox(width: 12),
         const Expanded(
           child: Text(
-            'Прототип с примерными данными. Изменения хранятся только на этом устройстве; аккаунты и семейная синхронизация пока не подключены.',
+            'Прототип с примерными данными. Изменения хранятся только на этом устройстве; настоящий вход и семейная синхронизация пока не подключены.',
           ),
         ),
       ],
@@ -165,7 +186,14 @@ class _PharmacyCard extends StatelessWidget {
     final packages = state.medicinesIn(pharmacy.id);
     final groups = groupMedicines(packages);
     final attention = packages
-        .where((item) => item.statusAt(DateTime.now()) != MedicineStatus.okay)
+        .where(
+          (item) =>
+              item.statusAt(
+                DateTime.now(),
+                warningDays: state.settings.expiryWarningDays,
+              ) !=
+              MedicineStatus.okay,
+        )
         .length;
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -267,7 +295,9 @@ class _CountChip extends StatelessWidget {
       children: [
         Icon(icon, size: 16),
         const SizedBox(width: 6),
-        Text(text, style: Theme.of(context).textTheme.labelMedium),
+        Flexible(
+          child: Text(text, style: Theme.of(context).textTheme.labelMedium),
+        ),
       ],
     ),
   );

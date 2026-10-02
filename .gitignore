@@ -48,3 +48,8 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Account development service: private configuration and databases
+server/.env
+server/.data/
+**/__pycache__/

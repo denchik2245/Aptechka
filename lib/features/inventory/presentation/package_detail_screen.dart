@@ -2,6 +2,7 @@ import 'package:aptechka/core/utils/date_labels.dart';
 import 'package:aptechka/core/widgets/async_value_view.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
 import 'package:aptechka/features/inventory/presentation/widgets/package_status_badge.dart';
+import 'package:aptechka/features/inventory/presentation/widgets/drug_photo.dart';
 import 'package:aptechka/features/medicines/domain/medicine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,7 +53,10 @@ class PackageDetailScreen extends ConsumerWidget {
             final pharmacy = state.pharmacies
                 .where((item) => item.id == package.pharmacyId)
                 .firstOrNull;
-            final status = package.statusAt(DateTime.now());
+            final status = package.statusAt(
+              DateTime.now(),
+              warningDays: state.settings.expiryWarningDays,
+            );
             return Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
@@ -71,8 +75,13 @@ class PackageDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${package.dosage} · ${package.form}',
+                      '${package.dosageLabel} · ${package.form}',
                       style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    DrugPhotoPanel(
+                      gtin: package.catalogEntryId?.startsWith('mdlp:') == true
+                          ? package.catalogEntryId!.substring(5)
+                          : package.gtin,
                     ),
                     const SizedBox(height: 24),
                     Card(
@@ -84,7 +93,11 @@ class PackageDetailScreen extends ConsumerWidget {
                             PackageStatusBadge(status: status),
                             const SizedBox(height: 14),
                             Text(
-                              _statusExplanation(package, status),
+                              _statusExplanation(
+                                package,
+                                status,
+                                state.settings.expiryWarningDays,
+                              ),
                               style: Theme.of(context).textTheme.bodyLarge,
                             ),
                           ],
@@ -112,6 +125,56 @@ class PackageDetailScreen extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 24),
+                    if (package.catalogEntryId != null) ...[
+                      Text(
+                        'Данные справочника',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 12),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Column(
+                            children: [
+                              if (package.manufacturer != null)
+                                _DetailRow(
+                                  label: 'Производитель',
+                                  value: package.manufacturer!,
+                                ),
+                              if (package.packageDescription != null) ...[
+                                const SizedBox(height: 16),
+                                _DetailRow(
+                                  label: 'Упаковка в каталоге',
+                                  value: package.packageDescription!,
+                                ),
+                              ],
+                              if (package.registrationId != null) ...[
+                                const SizedBox(height: 16),
+                                _DetailRow(
+                                  label: 'Регистрационное удостоверение',
+                                  value: package.registrationId!,
+                                ),
+                              ],
+                              if (package.registrationStatus != null) ...[
+                                const SizedBox(height: 16),
+                                _DetailRow(
+                                  label: 'Статус в источнике',
+                                  value: package.registrationStatus!,
+                                ),
+                              ],
+                              if (package.catalogVersion != null) ...[
+                                const SizedBox(height: 16),
+                                _DetailRow(
+                                  label: 'Выгрузка МДЛП',
+                                  value: package.catalogVersion!,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     Text(
                       'Сроки этой упаковки',
                       style: Theme.of(context).textTheme.titleLarge,
@@ -206,18 +269,21 @@ class PackageDetailScreen extends ConsumerWidget {
     );
   }
 
-  String _statusExplanation(Medicine package, MedicineStatus status) =>
-      switch (status) {
-        MedicineStatus.expired =>
-          'По одной из внесённых дат срок уже истёк. Проверьте эту упаковку.',
-        MedicineStatus.expiringSoon =>
-          'По внесённым датам до ближайшего срока осталось не более 30 дней.',
-        MedicineStatus.okay => 'По внесённым датам срок не истёк.',
-        MedicineStatus.unknown =>
-          package.openedAt != null && package.afterOpeningDays == null
-              ? 'Упаковка вскрыта, но срок после вскрытия не указан.'
-              : 'Для оценки срока недостаточно внесённых данных.',
-      };
+  String _statusExplanation(
+    Medicine package,
+    MedicineStatus status,
+    int warningDays,
+  ) => switch (status) {
+    MedicineStatus.expired =>
+      'По одной из внесённых дат срок уже истёк. Проверьте эту упаковку.',
+    MedicineStatus.expiringSoon =>
+      'По внесённым датам до ближайшего срока осталось не более $warningDays дней.',
+    MedicineStatus.okay => 'По внесённым датам срок не истёк.',
+    MedicineStatus.unknown =>
+      package.openedAt != null && package.afterOpeningDays == null
+          ? 'Упаковка вскрыта, но срок после вскрытия не указан.'
+          : 'Для оценки срока недостаточно внесённых данных.',
+  };
 }
 
 class _FactCard extends StatelessWidget {

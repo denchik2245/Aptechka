@@ -1,4 +1,5 @@
 import 'package:aptechka/features/inventory/domain/pharmacy.dart';
+import 'package:aptechka/features/settings/domain/app_settings.dart';
 import 'package:aptechka/features/medicines/domain/medicine.dart';
 import 'package:aptechka/features/reminders/domain/medication_reminder.dart';
 
@@ -9,6 +10,8 @@ class AppState {
     required this.medicines,
     required this.reminders,
     required this.intakeRecords,
+    this.settings = const AppSettings(),
+    this.profileScopeId = 'guest',
   });
 
   final List<Pharmacy> pharmacies;
@@ -16,6 +19,8 @@ class AppState {
   final List<Medicine> medicines;
   final List<MedicationReminder> reminders;
   final List<IntakeRecord> intakeRecords;
+  final AppSettings settings;
+  final String profileScopeId;
 
   Pharmacy get selectedPharmacy => pharmacies.firstWhere(
     (pharmacy) => pharmacy.id == selectedPharmacyId,
@@ -31,15 +36,21 @@ class AppState {
     List<Medicine>? medicines,
     List<MedicationReminder>? reminders,
     List<IntakeRecord>? intakeRecords,
+    AppSettings? settings,
+    String? profileScopeId,
   }) => AppState(
     pharmacies: pharmacies ?? this.pharmacies,
     selectedPharmacyId: selectedPharmacyId ?? this.selectedPharmacyId,
     medicines: medicines ?? this.medicines,
     reminders: reminders ?? this.reminders,
     intakeRecords: intakeRecords ?? this.intakeRecords,
+    settings: settings ?? this.settings,
+    profileScopeId: profileScopeId ?? this.profileScopeId,
   );
 
   Map<String, Object?> toJson() => {
+    'settings': settings.toJson(),
+    'profileScopeId': profileScopeId,
     'pharmacies': pharmacies.map((item) => item.toJson()).toList(),
     'selectedPharmacyId': selectedPharmacyId,
     'medicines': medicines.map((item) => item.toJson()).toList(),
@@ -67,6 +78,10 @@ class AppState {
               .toList();
     final selected = json['selectedPharmacyId'] as String?;
     return AppState(
+      profileScopeId: json['profileScopeId'] as String? ?? 'guest',
+      settings: AppSettings.fromJson(
+        Map<String, Object?>.from(json['settings'] as Map? ?? const {}),
+      ),
       pharmacies: pharmacies,
       selectedPharmacyId: pharmacies.any((item) => item.id == selected)
           ? selected!

@@ -40,7 +40,11 @@ void main() {
 
     await tester.pumpWidget(const ProviderScope(child: AptechkaApp()));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Аптечка мамы'));
+    await tester.scrollUntilVisible(
+      find.text('Аптечка мамы'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Аптечка мамы'));
     await tester.pumpAndSettle();
