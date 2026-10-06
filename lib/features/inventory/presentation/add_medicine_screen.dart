@@ -1,3 +1,4 @@
+import 'package:aptechka/core/utils/drug_text.dart';
 import 'package:aptechka/core/utils/date_labels.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
 import 'package:aptechka/features/inventory/data/drug_catalog_service.dart';
@@ -8,7 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class AddMedicineScreen extends ConsumerStatefulWidget {
-  const AddMedicineScreen({super.key});
+  const AddMedicineScreen({this.initialEntry, this.catalogGtin, super.key});
+
+  final DrugCatalogEntry? initialEntry;
+  final String? catalogGtin;
 
   @override
   ConsumerState<AddMedicineScreen> createState() => _AddMedicineScreenState();
@@ -39,11 +43,55 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   bool get _selectedVariantMatches {
     final entry = _selectedEntry;
     return entry != null &&
-        entry.name == _name.text &&
-        entry.activeIngredient == _activeIngredient.text &&
+        entry.displayName == _name.text &&
+        entry.displayIngredient == _activeIngredient.text &&
         entry.form == _form &&
         entry.dosage == _dosage.text &&
         entry.unit == _unit;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final entry = widget.initialEntry;
+    if (entry != null) {
+      _fillEntry(entry);
+    } else if (widget.catalogGtin != null) {
+      _restoreCatalogSelection();
+    }
+  }
+
+  void _fillEntry(DrugCatalogEntry entry) {
+    _selectedEntry = entry;
+    _gtin = null;
+    _name.text = entry.displayName;
+    _activeIngredient.text = entry.displayIngredient;
+    _form = entry.form;
+    _dosage.text = entry.dosage;
+    _unit = entry.unit;
+  }
+
+  Future<void> _restoreCatalogSelection() async {
+    final revision = _catalogRevision;
+    try {
+      final entry = await ref
+          .read(drugCatalogServiceProvider)
+          .findByGtin(widget.catalogGtin!);
+      if (!mounted || revision != _catalogRevision) return;
+      if (entry != null) {
+        setState(() => _fillEntry(entry));
+        return;
+      }
+    } catch (_) {
+      if (!mounted || revision != _catalogRevision) return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Не удалось загрузить выбранный препарат. Выберите его снова или заполните поля вручную.',
+        ),
+      ),
+    );
   }
 
   @override
@@ -76,8 +124,8 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
       setState(() {
         _gtin = gtin;
         _selectedEntry = entry;
-        _name.text = entry?.name ?? '';
-        _activeIngredient.text = entry?.activeIngredient ?? '';
+        _name.text = entry?.displayName ?? '';
+        _activeIngredient.text = entry?.displayIngredient ?? '';
         _form = entry?.form ?? 'Таблетки';
         _dosage.text = entry?.dosage ?? '';
         _unit = entry?.unit ?? 'таблеток';
@@ -101,14 +149,8 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   void _selectEntry(DrugCatalogEntry entry) {
     _catalogRevision++;
     setState(() {
-      _selectedEntry = entry;
       // A name match does not identify the physical package's barcode.
-      _gtin = null;
-      _name.text = entry.name;
-      _activeIngredient.text = entry.activeIngredient;
-      _form = entry.form;
-      _dosage.text = entry.dosage;
-      _unit = entry.unit;
+      _fillEntry(entry);
     });
   }
 
@@ -121,7 +163,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
       // Do not carry automatically filled characteristics to a different name.
       // Preserve fields the user has already corrected manually.
       if (previous != null) {
-        if (_activeIngredient.text == previous.activeIngredient) {
+        if (_activeIngredient.text == previous.displayIngredient) {
           _activeIngredient.clear();
         }
         if (_dosage.text == previous.dosage) _dosage.clear();
@@ -176,8 +218,8 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     final selected = _selectedEntry;
     final matched =
         selected != null &&
-        selected.name == _name.text &&
-        selected.activeIngredient == _activeIngredient.text &&
+        selected.displayName == _name.text &&
+        selected.displayIngredient == _activeIngredient.text &&
         selected.form == _form &&
         selected.dosage == _dosage.text &&
         selected.unit == _unit;
@@ -188,8 +230,10 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
       await ref
           .read(appControllerProvider.notifier)
           .addMedicine(
-            name: _name.text,
-            activeIngredient: _activeIngredient.text,
+            name: matched ? selected.name : _name.text,
+            activeIngredient: matched
+                ? selected.activeIngredient
+                : _activeIngredient.text,
             form: _form,
             dosage: _dosage.text,
             quantity: int.parse(_quantity.text),
@@ -221,7 +265,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
             reminderMinute: _reminderTime.minute,
             reminderDose: _reminderDose.text,
           );
-      if (mounted) context.pop();
+      if (mounted) context.pop(true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -323,7 +367,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
-                        'Из справочника: ${_selectedEntry!.name} · ${_selectedEntry!.form} · ${_selectedEntry!.dosageLabel}.${_selectedEntry!.manufacturer.isNotEmpty ? '\nПроизводитель: ${_selectedEntry!.manufacturer}.' : ''}${_selectedEntry!.packageDescription.isNotEmpty ? '\nУпаковка: ${_selectedEntry!.packageDescription}.' : ''}\nХарактеристики можно изменить. Сверьте их с упаковкой; количество и даты укажите отдельно.${_selectedEntry!.isInactive ? '\nВ источнике: ${_selectedEntry!.registrationStatus}.' : ''}',
+                        'Из справочника: ${_selectedEntry!.displayName} · ${_selectedEntry!.displayForm} · ${_selectedEntry!.dosageLabel}.${_selectedEntry!.manufacturer.isNotEmpty ? '\nПроизводитель: ${_selectedEntry!.displayManufacturer}.' : ''}${_selectedEntry!.packageDescription.isNotEmpty ? '\nУпаковка: ${_selectedEntry!.displayPackage}.' : ''}\nХарактеристики можно изменить. Сверьте их с упаковкой; количество и даты укажите отдельно.${_selectedEntry!.isInactive ? '\nВ источнике: ${_selectedEntry!.registrationStatus}.' : ''}',
                         style: TextStyle(
                           color: Theme.of(context)
                               .colorScheme
@@ -368,7 +412,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                                     (value) => DropdownMenuItem(
                                       value: value,
                                       child: Text(
-                                        value,
+                                        readableDrugText(value),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -447,7 +491,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                                     (value) => DropdownMenuItem(
                                       value: value,
                                       child: Text(
-                                        value,
+                                        readableDrugText(value),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),

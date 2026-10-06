@@ -1,3 +1,5 @@
+import 'package:aptechka/core/utils/drug_text.dart';
+
 class DrugCatalogEntry {
   const DrugCatalogEntry({
     required this.id,
@@ -28,10 +30,16 @@ class DrugCatalogEntry {
   final String sourceVersion;
   bool get isInactive => registrationStatus == 'Недействующий';
   String get dosageLabel => dosage.isEmpty ? 'Дозировка не указана' : dosage;
+  String get displayName => readableDrugName(name);
+  String get displayIngredient => readableDrugText(activeIngredient);
+  String get displayForm => readableDrugText(form);
+  String get displayManufacturer => readableManufacturer(manufacturer);
+  String get displayPackage => readableDrugText(packageDescription);
 }
 
 abstract interface class DrugCatalogService {
   String get sourceLabel;
+  Future<List<DrugCatalogEntry>> listAll();
   Future<List<DrugCatalogEntry>> search(String query, {int limit = 6});
   Future<DrugCatalogEntry?> findByGtin(String gtin);
 }

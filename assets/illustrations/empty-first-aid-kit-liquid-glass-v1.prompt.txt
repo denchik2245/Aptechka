@@ -1,0 +1,12 @@
+Generated with the built-in image_gen tool.
+
+Use case: stylized-concept.
+Asset type: a standalone transparent PNG empty-state illustration for a mobile personal first-aid-kit app, placed above the Russian heading "Create your first first-aid kit", on a white card surrounded by pale blue-grey UI with a vivid blue primary button. Generate ONLY the illustration, no UI or text.
+Primary request: a friendly first-aid-kit mascot in sophisticated liquid glass style.
+Subject: one small rounded rectangular first-aid carry case with a soft chunky glass handle, a luminous blue medical plus symbol inset into the upper front, and a tiny understated friendly face beneath it: two dark navy oval eyes and a small relaxed smile. No human arms or legs. The case is angled very slightly in a three-quarter view, almost front-facing, with a softly rounded silhouette and welcoming calm personality suitable for an adult healthcare utility.
+Materials: sculptural translucent clear glass with a faint icy-blue tint, smoothly bulging edges, thick polished glass rim, realistic optical refraction, subtle white edge highlights and soft blue internal reflections; the main blue plus is frosted glass. Visibly transparent glass, not opaque plastic or metallic chrome. Keep the glass readable when displayed on a white background.
+Composition: one cohesive compact subject, centered, fully visible, occupying about 75 percent of the square canvas, generous clear margins, no cropping. All details remain legible at 160-200px display size.
+Lighting: soft premium studio light, restrained glossy reflections, light airy mood. Minimal faint contact shadow immediately beneath the object, no broad grey floor or halo.
+Palette: clear glass, icy blue, vivid iOS-like blue #007AFF accents and tiny dark navy facial features.
+Backdrop: genuinely transparent alpha background, no white background rectangle, no checkerboard drawn into image.
+Avoid: words, typography, logos, watermarks, other objects, pills, sparkles, clutter, red cross, excessive rainbow iridescence, uncanny face, dramatic dark reflections, full app screenshot.

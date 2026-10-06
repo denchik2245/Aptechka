@@ -4,6 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   const catalog = DemoDrugCatalogService();
 
+  test('inline catalog search also tolerates name typos', () async {
+    final matches = await catalog.search('ибупорфен');
+    expect(matches.map((entry) => entry.name), everyElement('Ибупрофен'));
+    expect(matches.map((entry) => entry.dosage), ['200 мг', '400 мг']);
+  });
+
   test(
     'partial search ranks names before ingredients and keeps distinct variants',
     () async {

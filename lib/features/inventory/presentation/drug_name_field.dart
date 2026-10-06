@@ -99,7 +99,7 @@ class _DrugNameFieldState extends ConsumerState<DrugNameField> {
   void _choose(DrugCatalogEntry entry) {
     setState(() {
       _dismiss();
-      _query = entry.name;
+      _query = entry.displayName;
     });
     widget.onSelected(entry);
     FocusScope.of(context).unfocus();
@@ -183,25 +183,25 @@ class _DrugNameFieldState extends ConsumerState<DrugNameField> {
                   ),
                 ..._results.map(
                   (entry) => ListTile(
-                    title: Text(entry.name),
+                    title: Text(entry.displayName),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${entry.form} · ${entry.dosageLabel}'),
+                        Text('${entry.displayForm} · ${entry.dosageLabel}'),
                         Text(
-                          'МНН: ${entry.activeIngredient}',
+                          'МНН: ${entry.displayIngredient}',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (entry.manufacturer.isNotEmpty)
                           Text(
-                            'Производитель: ${entry.manufacturer}',
+                            'Производитель: ${entry.displayManufacturer}',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         if (entry.packageDescription.isNotEmpty)
                           Text(
-                            'Упаковка: ${entry.packageDescription}',
+                            'Упаковка: ${entry.displayPackage}',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),

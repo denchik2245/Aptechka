@@ -1,6 +1,10 @@
 import 'package:aptechka/features/accounts/presentation/account_screen.dart';
 import 'package:aptechka/features/home/presentation/pharmacies_screen.dart';
 import 'package:aptechka/features/inventory/presentation/add_medicine_screen.dart';
+import 'package:aptechka/features/inventory/presentation/drug_catalog_screen.dart';
+import 'package:aptechka/features/inventory/presentation/drug_catalog_variants_screen.dart';
+import 'package:aptechka/features/inventory/domain/drug_catalog_group.dart';
+import 'package:aptechka/features/inventory/domain/drug_catalog_entry.dart';
 import 'package:aptechka/features/inventory/presentation/pharmacy_inventory_screen.dart';
 import 'package:aptechka/features/inventory/presentation/medicine_group_screen.dart';
 import 'package:aptechka/features/inventory/presentation/package_detail_screen.dart';
@@ -66,8 +70,28 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
+      path: '/medicine/select',
+      builder: (context, state) => const DrugCatalogScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/medicine/variants',
+      builder: (context, state) => DrugCatalogVariantsScreen(
+        groupKey: state.uri.queryParameters['name'] ?? '',
+        initialGroup: state.extra is DrugCatalogGroup
+            ? state.extra as DrugCatalogGroup
+            : null,
+      ),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
       path: '/medicine/new',
-      builder: (context, state) => const AddMedicineScreen(),
+      builder: (context, state) => AddMedicineScreen(
+        initialEntry: state.extra is DrugCatalogEntry
+            ? state.extra as DrugCatalogEntry
+            : null,
+        catalogGtin: state.uri.queryParameters['catalog'],
+      ),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

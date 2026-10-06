@@ -1,0 +1,13 @@
+Generated with the built-in image_gen tool.
+Style reference: empty-first-aid-kit-liquid-glass-v1.png
+
+Use case: stylized-concept.
+Asset type: standalone transparent PNG empty-state illustration for a mobile personal first-aid app, for the page "Add your first medicine".
+Input image 1: STYLE REFERENCE ONLY — the existing glass first-aid-kit mascot. Match its polished translucent icy-blue glass, rich blue accents, soft glossy studio reflections, navy oval eyes with small white highlights and tiny friendly smile. Create a NEW subject.
+Primary request: one friendly medicine bottle mascot in the same liquid glass illustration series.
+Subject: a small squat pharmaceutical bottle with a wide rounded rectangular body, softly rounded shoulders and a short neck, topped by a chunky blue translucent screw cap with subtle wide vertical grooves. The bottle has one softly frosted glass label inset on its front, containing a simple blue medical plus near the upper center and a small relaxed friendly face below: two navy oval eyes and a tiny smile. The label has no writing. The shape is unmistakably a medicine bottle, with proportions about 1.15 times taller than wide including its cap. No arms or legs. Bottle is empty inside.
+Materials: clear thick polished liquid glass with icy-blue tint, smooth rounded edges, realistic soft refraction, subtle blue internal reflections, bright but restrained white studio highlights, vivid translucent blue cap and plus. Match the style reference closely, keep the glass readable on a white background. The frosted glass label is part of the sculptural glass object, not a paper sticker.
+Composition: one centered cohesive compact mascot, almost front-facing with a slight three-quarter angle, fully visible, occupy about 75 percent of a square canvas with generous transparent margins. Clear silhouette and minimal details readable at 160-200px display size.
+Lighting/mood: soft premium studio light, airy, calm and friendly. No dark environment reflections or broad ground shadow.
+Backdrop: genuinely transparent alpha background. No white rectangle, no painted checkerboard.
+Avoid: capsule-shaped objects, pills, tablets, contents inside the bottle, extra objects, other characters, UI, text, letters, logos, watermark, red cross, sparkles, rainbow iridescence, chrome metal, opaque plastic. Generate only the standalone bottle illustration.

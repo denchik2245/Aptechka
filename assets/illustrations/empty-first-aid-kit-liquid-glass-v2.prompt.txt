@@ -1,0 +1,11 @@
+Generated with the built-in image_gen tool. Transparent background requested.
+
+Use case: stylized-concept.
+Asset type: standalone illustration asset for an empty-state card in a mobile home medicine organizer app.
+Primary request: a charming 2D first-aid-kit mascot in liquid glass style, inviting the user to create their first medicine kit.
+Subject: one rounded rectangular small first-aid case, viewed essentially front-on, with a simple rounded carrying handle, a softly luminous blue medical plus on its body, two small navy dot eyes and a subtle friendly smile below the plus, small rounded mitten hands at its sides, one hand gently waving. It should feel calm, helpful and sophisticated.
+Style/medium: polished 2D digital illustration, simple flat silhouette with translucent layered glass fills, soft gradient shading, clear milky edges and restrained specular highlights; Apple-like liquid-glass material expressed through 2D shapes. No photorealistic 3D product rendering, no isometric perspective. Rounded fluid geometry, compact readable silhouette at 140px display width.
+Palette: icy blue, translucent pearl white, subtle periwinkle, saturated iOS blue accent approximately #007AFF, tiny dark navy facial details. Make outer edges blue enough to remain readable against a white card.
+Composition: a single centered mascot on a fully transparent canvas, landscape composition about 4:3, entire handle and hands visible, generous even clear padding around the character; character occupies about 65% of canvas width. No extra objects.
+Lighting/mood: soft luminous highlights, cheerful but understated, premium and clean, no dramatic lighting.
+Constraints: actual alpha transparent background, no background panel, no scenery, no lettering, no text, no watermark, no logo, no pills, no ground plane, no cast ground shadow. Render only the mascot; do not reproduce a phone screen or any UI.

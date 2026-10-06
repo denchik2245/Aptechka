@@ -1,3 +1,4 @@
+import 'package:aptechka/core/utils/drug_text.dart';
 import 'package:aptechka/core/widgets/async_value_view.dart';
 import 'package:aptechka/core/utils/russian_count.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
@@ -322,7 +323,7 @@ class _PharmacyInventoryScreenState
       floatingActionButton:
           appState.asData?.value.selectedPharmacy.canEdit == true
           ? FloatingActionButton.extended(
-              onPressed: () => context.push('/medicine/new'),
+              onPressed: () => context.push('/medicine/select'),
               icon: const Icon(Icons.add),
               label: const Text('Добавить упаковку'),
             )
@@ -384,11 +385,11 @@ class _MedicineGroupCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      group.name,
+                      readableDrugName(group.name),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 3),
-                    Text('${group.dosage} · ${group.form}'),
+                    Text('${group.dosage} · ${readableDrugText(group.form)}'),
                     const SizedBox(height: 10),
                     Text(
                       count == 1
@@ -466,7 +467,7 @@ class _EmptyState extends StatelessWidget {
             )
           else if (canEdit)
             FilledButton.icon(
-              onPressed: () => context.push('/medicine/new'),
+              onPressed: () => context.push('/medicine/select'),
               icon: const Icon(Icons.add),
               label: const Text('Добавить упаковку'),
             ),

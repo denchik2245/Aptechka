@@ -65,6 +65,85 @@ void main() {
   }
 
   testWidgets(
+    'readable prefill saves original catalog identity and displays saved text normally',
+    (tester) async {
+      final container = await mount(tester);
+      const entry = DrugCatalogEntry(
+        id: 'uppercase',
+        name: 'ПРЕПАРАТ',
+        activeIngredient: 'ФЛУОЦИНОЛОНА АЦЕТОНИД',
+        form: 'ТАБЛЕТКИ, ПОКРЫТЫЕ ОБОЛОЧКОЙ',
+        dosage: '500 МЕ',
+        unit: 'таблеток',
+        manufacturer: 'АО ВЕРТЕКС',
+        packageDescription: 'УПАКОВКА по 10 шт',
+        registrationId: 'ЛП-002969',
+      );
+      appRouter.pop();
+      await tester.pumpAndSettle();
+      appRouter.push('/medicine/new', extra: entry);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('drug-name-input')),
+            )
+            .controller!
+            .text,
+        'Препарат',
+      );
+      await reveal(tester, 'drug-ingredient-input');
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('drug-ingredient-input')),
+            )
+            .controller!
+            .text,
+        'Флуоцинолона ацетонид',
+      );
+      await reveal(tester, 'drug-form-input');
+      expect(find.text('Таблетки, покрытые оболочкой'), findsWidgets);
+      await reveal(tester, 'package-location-input');
+      await tester.enterText(
+        find.byKey(const ValueKey('package-location-input')),
+        'Шкаф',
+      );
+      await tester.scrollUntilVisible(
+        find.text('Добавить упаковку'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Добавить упаковку'));
+      await tester.pumpAndSettle();
+      final medicine = container
+          .read(appControllerProvider)
+          .requireValue
+          .medicines
+          .last;
+      expect(medicine.catalogEntryId, entry.id);
+      expect(medicine.name, entry.name);
+      expect(medicine.activeIngredient, entry.activeIngredient);
+      expect(medicine.form, entry.form);
+      expect(medicine.manufacturer, entry.manufacturer);
+      expect(medicine.packageDescription, entry.packageDescription);
+      expect(medicine.registrationId, entry.registrationId);
+      expect(medicine.dosage, '500 МЕ');
+      await tester.scrollUntilVisible(
+        find.text('Препарат'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Препарат'), findsOneWidget);
+      expect(
+        find.text('500 МЕ · Таблетки, покрытые оболочкой'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'selected capsule variant fills fields and saves without guessing package data',
     (tester) async {
       final container = await mount(tester);

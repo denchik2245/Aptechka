@@ -1,3 +1,4 @@
+import 'package:aptechka/core/utils/drug_text.dart';
 import 'package:aptechka/core/utils/date_labels.dart';
 import 'package:aptechka/core/utils/russian_count.dart';
 import 'package:aptechka/core/widgets/async_value_view.dart';
@@ -75,12 +76,12 @@ class MedicineGroupScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      representative.name,
+                      readableDrugName(representative.name),
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${representative.dosageLabel} · ${representative.form}',
+                      '${representative.dosageLabel} · ${readableDrugText(representative.form)}',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 24),

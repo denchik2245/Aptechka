@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:aptechka/features/inventory/domain/drug_catalog_entry.dart';
+import 'package:aptechka/features/inventory/domain/drug_name_matching.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -15,6 +16,38 @@ String normalizeDrugQuery(String value) => value
     .replaceAll(',', '.')
     .replaceAll(_queryMarks, ' ')
     .replaceAll(_querySpaces, ' ');
+
+// Russian names come first; ё is sorted together with е. Keep all GTIN variants.
+String drugNameSortKey(String name) {
+  final normalized = normalizeDrugQuery(name);
+  final first = normalized.isEmpty ? 0 : normalized.codeUnitAt(0);
+  final group = first >= 0x430 && first <= 0x44f
+      ? 0
+      : first >= 0x61 && first <= 0x7a
+      ? 1
+      : 2;
+  return '$group:$normalized';
+}
+
+List<DrugCatalogEntry> alphabetizeDrugEntries(List<DrugCatalogEntry> entries) {
+  final keys = {
+    for (final entry in entries) entry.id: drugNameSortKey(entry.name),
+  };
+  return List<DrugCatalogEntry>.unmodifiable(
+    [...entries]..sort((a, b) {
+      final name = keys[a.id]!.compareTo(keys[b.id]!);
+      if (name != 0) return name;
+      final status = (a.isInactive ? 1 : 0).compareTo(b.isInactive ? 1 : 0);
+      if (status != 0) return status;
+      final variant =
+          '${a.form} ${a.dosage} ${a.manufacturer} ${a.packageDescription}'
+              .compareTo(
+                '${b.form} ${b.dosage} ${b.manufacturer} ${b.packageDescription}',
+              );
+      return variant != 0 ? variant : a.id.compareTo(b.id);
+    }),
+  );
+}
 
 class MdlpDrugCatalogService implements DrugCatalogService {
   MdlpDrugCatalogService({Future<String> Function()? loadAsset})
@@ -53,20 +86,34 @@ class MdlpDrugCatalogService implements DrugCatalogService {
   }
 
   @override
+  Future<List<DrugCatalogEntry>> listAll() async =>
+      (await _catalog()).alphabeticalEntries;
+
+  @override
   Future<List<DrugCatalogEntry>> search(String query, {int limit = 6}) async {
     final normalized = normalizeDrugQuery(query);
     if (normalized.length < 2 || limit <= 0) return const [];
     final catalog = await _catalog();
     final words = normalized.split(' ');
-    // Eight buckets: name relevance first, then status within equal relevance.
+    // Exact matches precede typo suggestions; status breaks equal relevance.
     // Every source row remains addressable by GTIN; search avoids identical cards.
-    final buckets = List.generate(8, (_) => <DrugCatalogEntry>[]);
+    final buckets = List.generate(12, (_) => <DrugCatalogEntry>[]);
+    final typoDistances = <String, int>{};
     final seen = <String>{};
     for (var i = 0; i < catalog.entries.length; i++) {
-      if (!words.every(catalog.searchText[i].contains)) continue;
       final entry = catalog.entries[i];
       final name = catalog.names[i];
-      final rank = name == normalized
+      final exact = words.every(catalog.searchText[i].contains);
+      final distance = exact
+          ? -1
+          : typoDistances.putIfAbsent(
+              name,
+              () => drugNameTypoDistance(name, normalized) ?? -1,
+            );
+      if (!exact && distance < 0) continue;
+      final rank = !exact
+          ? 3 + distance
+          : name == normalized
           ? 0
           : name.startsWith(normalized)
           ? 1
@@ -102,12 +149,14 @@ class _CatalogData {
     this.names,
     this.searchText,
     this.byGtin,
+    this.alphabeticalEntries,
   );
   final Map<String, dynamic> metadata;
   final List<DrugCatalogEntry> entries;
   final List<String> names;
   final List<String> searchText;
   final Map<String, DrugCatalogEntry> byGtin;
+  final List<DrugCatalogEntry> alphabeticalEntries;
 }
 
 _CatalogData _parseCatalog(String raw) {
@@ -173,5 +222,12 @@ _CatalogData _parseCatalog(String raw) {
       DateTime.tryParse(metadata['validDate'] as String) == null) {
     throw const FormatException('Неполный справочник');
   }
-  return _CatalogData(metadata, entries, names, searchText, gtins);
+  return _CatalogData(
+    metadata,
+    entries,
+    names,
+    searchText,
+    gtins,
+    alphabetizeDrugEntries(entries),
+  );
 }

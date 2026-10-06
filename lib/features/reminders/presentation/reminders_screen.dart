@@ -1,3 +1,4 @@
+import 'package:aptechka/core/utils/drug_text.dart';
 import 'package:aptechka/features/medicines/domain/medicine.dart';
 import 'package:aptechka/features/inventory/presentation/widgets/package_status_badge.dart';
 import 'package:go_router/go_router.dart';
@@ -140,7 +141,7 @@ class _ReminderContent extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    medicine.name,
+                                    readableDrugName(medicine.name),
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium,
@@ -305,7 +306,7 @@ class _AttentionSummary extends StatelessWidget {
                   color: Theme.of(context).colorScheme.error,
                 ),
                 title: Text(
-                  item.name,
+                  readableDrugName(item.name),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 subtitle: Text(

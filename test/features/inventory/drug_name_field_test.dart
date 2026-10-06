@@ -11,6 +11,8 @@ class ControlledCatalog implements DrugCatalogService {
   @override
   String get sourceLabel => 'Тестовый справочник';
   @override
+  Future<List<DrugCatalogEntry>> listAll() async => const [];
+  @override
   Future<DrugCatalogEntry?> findByGtin(String gtin) async => null;
   @override
   Future<List<DrugCatalogEntry>> search(String query, {int limit = 6}) {

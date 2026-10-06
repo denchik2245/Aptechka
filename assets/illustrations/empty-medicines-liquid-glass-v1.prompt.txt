@@ -1,0 +1,13 @@
+Generated with the built-in image_gen tool.
+Style reference: empty-first-aid-kit-liquid-glass-v1.png
+
+Use case: stylized-concept.
+Asset type: standalone transparent PNG empty-state illustration for the mobile first-aid app Aptechka, for the page inviting the user to add their first medicine.
+Input image 1: STYLE REFERENCE ONLY — the existing first-aid-kit mascot from this same app. Match its glass material, icy-blue edges, glossy reflections, dark navy oval eyes with small white highlights, and tiny relaxed smile. Create a different subject with the same visual identity.
+Primary request: one friendly pill capsule mascot sculpted from liquid glass.
+Subject: one plump rounded capsule with two softly joined halves and a subtle central seam, tilted diagonally about 25 degrees from horizontal, lower left to upper right. One half is nearly clear icy-blue glass, the other richer translucent vivid blue glass. A small friendly face is placed on the front of the clearer half: two dark navy oval eyes and one tiny smile, matching the reference. No arms or legs. The silhouette must clearly read as a medicine capsule, not as a suitcase, container, bean or candy.
+Style/materials: premium polished 3D liquid glass, thick smoothly rounded transparent edges, realistic soft refraction, blue internal reflections, broad white studio highlights, the same level of translucency and polish as the reference. Keep it readable on a white card and on a pale blue-grey page background.
+Composition: one cohesive compact centered subject, fully visible, occupy approximately 75 percent of a square canvas with generous clear margins. Nearly front-facing with subtle three-quarter volume. Details must be legible at 160-200px display size.
+Lighting: soft airy studio light, restrained glossy highlights. No dramatic dark reflections, rainbow effects or broad ground shadows.
+Backdrop: genuine transparent alpha background, no background rectangle and no checkerboard painted into the image.
+Constraints: generate ONLY the illustration; no UI, no text, no letters, no logos, no watermark, no medical cross, no other objects, no extra capsules, no sparkles, no packaging.

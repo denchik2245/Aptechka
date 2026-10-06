@@ -44,6 +44,37 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final fullCatalog = MdlpDrugCatalogService();
 
+  test(
+    'full catalog finds misspelled names and keeps exact matches first',
+    () async {
+      for (final query in ['ибупрафен', 'ибупрофн', 'ибупорфен', 'ибупрафн']) {
+        final matches = await fullCatalog.search(query);
+        expect(matches, isNotEmpty, reason: query);
+        expect(matches.first.name, 'Ибупрофен', reason: query);
+      }
+      final exact = await fullCatalog.search('ибупрофен', limit: 12);
+      expect(exact.every((entry) => entry.name == 'Ибупрофен'), isTrue);
+    },
+  );
+
+  test(
+    'alphabetical list retains the complete snapshot and every GTIN',
+    () async {
+      final entries = await fullCatalog.listAll();
+      expect(entries, hasLength(74791));
+      expect(entries.map((entry) => entry.gtin).toSet(), hasLength(74791));
+      expect(entries.where((entry) => entry.isInactive), hasLength(6349));
+      for (var i = 1; i < entries.length; i++) {
+        expect(
+          drugNameSortKey(entries[i - 1].name)
+              .compareTo(drugNameSortKey(entries[i].name)),
+          lessThanOrEqualTo(0),
+        );
+      }
+      expect(identical(entries, await fullCatalog.listAll()), isTrue);
+    },
+  );
+
   test('bundled full snapshot searches real trade names and manufacturer/package terms', () async {
     final clock = Stopwatch()..start();
     final results = await fullCatalog.search('цитрамон п', limit: 12);

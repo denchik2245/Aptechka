@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aptechka/features/inventory/data/mdlp_drug_catalog_service.dart';
 import 'package:aptechka/features/inventory/domain/drug_catalog_entry.dart';
+import 'package:aptechka/features/inventory/domain/drug_name_matching.dart';
 
 export 'package:aptechka/features/inventory/domain/drug_catalog_entry.dart';
 
@@ -93,6 +94,10 @@ class DemoDrugCatalogService implements DrugCatalogService {
       .replaceAll(RegExp(r'\s+'), ' ');
 
   @override
+  Future<List<DrugCatalogEntry>> listAll() async =>
+      alphabetizeDrugEntries(_entries);
+
+  @override
   Future<List<DrugCatalogEntry>> search(String query, {int limit = 6}) async {
     final normalized = _normalize(query);
     if (normalized.length < 2 || limit <= 0) return const [];
@@ -101,10 +106,17 @@ class DemoDrugCatalogService implements DrugCatalogService {
       final text = _normalize(
         '${entry.name} ${entry.activeIngredient} ${entry.form} ${entry.dosage}',
       );
-      return words.every(text.contains);
+      return words.every(text.contains) ||
+          drugNameTypoDistance(_normalize(entry.name), normalized) != null;
     }).toList();
     int rank(DrugCatalogEntry entry) {
       final name = _normalize(entry.name);
+      final text = _normalize(
+        '${entry.name} ${entry.activeIngredient} ${entry.form} ${entry.dosage}',
+      );
+      if (!words.every(text.contains)) {
+        return 3 + (drugNameTypoDistance(name, normalized) ?? 3);
+      }
       return name == normalized
           ? 0
           : name.startsWith(normalized)

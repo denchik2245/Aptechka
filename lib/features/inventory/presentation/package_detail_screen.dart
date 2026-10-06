@@ -1,3 +1,4 @@
+import 'package:aptechka/core/utils/drug_text.dart';
 import 'package:aptechka/core/utils/date_labels.dart';
 import 'package:aptechka/core/widgets/async_value_view.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
@@ -70,12 +71,12 @@ class PackageDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      package.name,
+                      readableDrugName(package.name),
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${package.dosageLabel} · ${package.form}',
+                      '${package.dosageLabel} · ${readableDrugText(package.form)}',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     DrugPhotoPanel(
@@ -139,13 +140,17 @@ class PackageDetailScreen extends ConsumerWidget {
                               if (package.manufacturer != null)
                                 _DetailRow(
                                   label: 'Производитель',
-                                  value: package.manufacturer!,
+                                  value: readableManufacturer(
+                                    package.manufacturer!,
+                                  ),
                                 ),
                               if (package.packageDescription != null) ...[
                                 const SizedBox(height: 16),
                                 _DetailRow(
                                   label: 'Упаковка в каталоге',
-                                  value: package.packageDescription!,
+                                  value: readableDrugText(
+                                    package.packageDescription!,
+                                  ),
                                 ),
                               ],
                               if (package.registrationId != null) ...[

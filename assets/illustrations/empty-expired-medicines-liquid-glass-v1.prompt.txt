@@ -1,0 +1,13 @@
+Generated with the built-in image_gen tool.
+Style reference: empty-first-aid-kit-liquid-glass-v1.png
+
+Use case: stylized-concept.
+Asset type: standalone transparent PNG empty-state mascot illustration for the mobile first-aid app Aptechka. It appears when the user selects the expired-medicines filter and there are no expired medicines. The accompanying UI heading reads "No expired medicines". Convey reassurance and a positive status.
+Input image 1: STYLE REFERENCE ONLY — the existing first-aid-kit mascot. Match its translucent polished icy-blue liquid glass, rounded volumes, rich blue accents, broad soft white reflections, navy oval eyes with small white highlights, and tiny relaxed smile. Create a new subject.
+Primary request: one friendly small calendar mascot made entirely from liquid glass, with a prominent blue checkmark indicating dates are in order.
+Subject: a compact almost-square calendar tile with very rounded corners and thick soft glass edges, two short separate rounded blue binding loops at the top and a subtle translucent blue header strip. The two separate loops clearly identify it as a calendar, not a carrying case. The main front panel is softly frosted icy-clear glass with one large vivid blue glass checkmark in the upper-middle area. Below the checkmark, two small dark navy oval eyes and one small gentle smile, matching the reference mascot. No numbers, weekday grid, dates or writing. No arms or legs.
+Materials: transparent thick polished glass with a faint icy-blue tint, rich blue internal reflections, realistic soft optical refraction, restrained glossy studio highlights. Checkmark is sculpted translucent blue glass inset on the front. Keep the calendar readable on a white card and pale blue-grey background. All parts are glass rather than paper, chrome or plastic.
+Composition: one centered cohesive compact subject, almost front-facing with a subtle three-quarter view, fully visible, about 75 percent of the square canvas with generous transparent margins. Simple silhouette and features readable at 160-200px display size.
+Lighting/mood: bright airy soft studio light, calm reassuring and friendly, same rendering style and polish as the reference.
+Backdrop: genuinely transparent alpha background, no opaque rectangle, no painted checkerboard, no broad grey floor shadow.
+Avoid: capsules, pills, bottles, extra objects, UI, text, numbers, letters, logos, watermarks, red warning symbols, medical crosses, sparkles, strong rainbow effects, dark dramatic reflections. Generate only the standalone calendar illustration.
