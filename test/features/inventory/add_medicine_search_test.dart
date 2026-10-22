@@ -3,6 +3,7 @@ import 'package:aptechka/app/router.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
 import 'package:aptechka/features/inventory/data/drug_catalog_service.dart';
 import 'package:aptechka/features/inventory/data/mdlp_drug_catalog_service.dart';
+import 'package:aptechka/features/inventory/presentation/drug_name_field.dart';
 import 'package:aptechka/features/settings/domain/backup_codec.dart';
 import 'package:aptechka/features/settings/domain/app_settings.dart';
 import 'package:flutter/material.dart';
@@ -46,11 +47,18 @@ void main() {
     String key, {
     double delta = 200,
   }) async {
-    await tester.scrollUntilVisible(
-      find.byKey(ValueKey(key)),
-      delta,
-      scrollable: find.byType(Scrollable).first,
-    );
+    final target = find.byKey(ValueKey(key));
+    // Scroll the form itself rather than the long ingredient field under its center.
+    for (var i = 0; target.evaluate().isEmpty && i < 50; i++) {
+      final position = tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position;
+      position.jumpTo(
+        (position.pixels + delta).clamp(0, position.maxScrollExtent),
+      );
+      await tester.pumpAndSettle();
+    }
+    await tester.ensureVisible(target);
     await tester.pumpAndSettle();
   }
 
@@ -165,7 +173,13 @@ void main() {
       );
       await tester.tap(find.text('Нурофен Экспресс Форте'));
       await tester.pumpAndSettle();
-      expect(find.byType(ListTile), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(DrugNameField),
+          matching: find.byType(ListTile),
+        ),
+        findsNothing,
+      );
       await reveal(tester, 'drug-ingredient-input');
       expect(
         tester
@@ -223,6 +237,11 @@ void main() {
       await tester.tap(find.text('Гомеовокс').first);
       await tester.pumpAndSettle();
       // Collapsing the results can leave the list below the package fields.
+      tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position
+          .jumpTo(0);
+      await tester.pumpAndSettle();
       await reveal(tester, 'drug-name-input', delta: -200);
       await reveal(tester, 'package-location-input');
       await tester.enterText(

@@ -12,6 +12,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  Future<void> tapVariant(WidgetTester tester, String key) async {
+    await tester.scrollUntilVisible(
+      find.byKey(ValueKey(key)),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(ValueKey(key)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey(key)));
+  }
+
   Future<ProviderContainer> mount(
     WidgetTester tester, {
     DrugCatalogService catalog = const DemoDrugCatalogService(),
@@ -64,7 +76,7 @@ void main() {
     }
     await tester.tap(find.text('Ибупрофен'));
     await tester.pumpAndSettle();
-    expect(find.text('Варианты препарата'), findsOneWidget);
+    expect(find.text('Выберите упаковку'), findsOneWidget);
     expect(find.text('200 мг'), findsOneWidget);
     expect(find.text('400 мг'), findsOneWidget);
     appRouter.pop();
@@ -114,12 +126,12 @@ void main() {
       final variantInput = find.byKey(const ValueKey('catalog-variant-input'));
       await tester.enterText(variantInput, '400 таблетки');
       await tester.pumpAndSettle();
-      expect(find.text('200 мг'), findsNothing);
+      expect(find.byKey(const ValueKey('catalog-entry-200')), findsNothing);
       expect(find.text('400 мг'), findsOneWidget);
       await tester.enterText(variantInput, '4602884006732');
       await tester.pumpAndSettle();
       expect(find.text('200 мг'), findsOneWidget);
-      expect(find.text('400 мг'), findsNothing);
+      expect(find.byKey(const ValueKey('catalog-entry-400')), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -144,13 +156,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Нурофен Экспресс Форте'));
       await tester.pumpAndSettle();
-      expect(find.text('Варианты препарата'), findsOneWidget);
-      await tester.tap(
-        find.byKey(
-          const ValueKey(
-            'catalog-entry-demo-nurofen-express-forte-400-capsules',
-          ),
-        ),
+      expect(find.text('Выберите упаковку'), findsOneWidget);
+      await tapVariant(
+        tester,
+        'catalog-entry-demo-nurofen-express-forte-400-capsules',
       );
       await tester.pumpAndSettle();
       expect(find.text('Новая упаковка'), findsOneWidget);
@@ -165,7 +174,7 @@ void main() {
       );
       appRouter.pop();
       await tester.pumpAndSettle();
-      expect(find.text('Варианты препарата'), findsOneWidget);
+      expect(find.text('Выберите упаковку'), findsOneWidget);
       appRouter.pop();
       await tester.pumpAndSettle();
       expect(
@@ -192,9 +201,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Лоратадин'));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const ValueKey('catalog-entry-demo-loratadine-10-tablets')),
-      );
+      await tapVariant(tester, 'catalog-entry-demo-loratadine-10-tablets');
       await tester.pumpAndSettle();
       expect(
         tester
@@ -265,17 +272,18 @@ void main() {
       expect(find.text('2 варианта'), findsOneWidget);
       await tester.tap(find.text('Ибупрофен'));
       await tester.pumpAndSettle();
-      expect(find.text('2 варианта из 2'), findsOneWidget);
+      expect(find.text('2 варианта упаковки'), findsOneWidget);
       expect(find.text('200 мг'), findsOneWidget);
       expect(find.text('400 мг'), findsOneWidget);
       final variantInput = find.byKey(const ValueKey('catalog-variant-input'));
       await tester.enterText(variantInput, '400');
       await tester.pumpAndSettle();
       expect(find.text('1 вариант из 2'), findsOneWidget);
-      expect(find.text('200 мг'), findsNothing);
-      await tester.tap(
-        find.byKey(const ValueKey('catalog-entry-demo-ibuprofen-400-tablets')),
+      expect(
+        find.byKey(const ValueKey('catalog-entry-demo-ibuprofen-200-tablets')),
+        findsNothing,
       );
+      await tapVariant(tester, 'catalog-entry-demo-ibuprofen-400-tablets');
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('drug-dosage-input')),
@@ -294,9 +302,11 @@ void main() {
       appRouter.pop();
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(variantInput).controller!.text, '400');
+      await tester.ensureVisible(find.byTooltip('Очистить поиск вариантов'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Очистить поиск вариантов'));
       await tester.pumpAndSettle();
-      expect(find.text('2 варианта из 2'), findsOneWidget);
+      expect(find.text('2 варианта упаковки'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

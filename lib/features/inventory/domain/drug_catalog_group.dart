@@ -1,4 +1,5 @@
 import 'package:aptechka/features/inventory/domain/drug_catalog_entry.dart';
+import 'package:aptechka/features/inventory/domain/drug_catalog_variant.dart';
 
 // Match spelling and case, but retain +, hyphens and other meaningful qualifiers.
 String drugCatalogNameKey(String name) =>
@@ -10,6 +11,9 @@ class DrugCatalogGroup {
 
   final String key;
   final List<DrugCatalogEntry> entries;
+  late final List<DrugCatalogVariant> variants = List.unmodifiable(
+    groupDrugCatalogVariants(entries),
+  );
   String get name => entries.first.displayName;
   List<String> get forms =>
       entries.map((entry) => entry.displayForm).toSet().toList();

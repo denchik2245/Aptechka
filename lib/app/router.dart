@@ -5,6 +5,7 @@ import 'package:aptechka/features/inventory/presentation/drug_catalog_screen.dar
 import 'package:aptechka/features/inventory/presentation/drug_catalog_variants_screen.dart';
 import 'package:aptechka/features/inventory/domain/drug_catalog_group.dart';
 import 'package:aptechka/features/inventory/domain/drug_catalog_entry.dart';
+import 'package:aptechka/features/inventory/domain/drug_catalog_variant.dart';
 import 'package:aptechka/features/inventory/presentation/pharmacy_inventory_screen.dart';
 import 'package:aptechka/features/inventory/presentation/medicine_group_screen.dart';
 import 'package:aptechka/features/inventory/presentation/package_detail_screen.dart';
@@ -91,6 +92,15 @@ final appRouter = GoRouter(
             ? state.extra as DrugCatalogEntry
             : null,
         catalogGtin: state.uri.queryParameters['catalog'],
+        initialVariant: state.extra is DrugCatalogVariant
+            ? state.extra as DrugCatalogVariant
+            : null,
+        catalogGtins: state.uri.queryParameters['candidates']
+            ?.split(',')
+            .where((value) => value.isNotEmpty)
+            .toList(),
+        scannedGtin: state.uri.queryParameters['scanned'],
+        initialName: state.uri.queryParameters['name'],
       ),
     ),
     GoRoute(

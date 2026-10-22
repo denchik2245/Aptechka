@@ -302,7 +302,7 @@ class _DrugCatalogScreenState extends ConsumerState<DrugCatalogScreen> {
                                 ),
                               Text(
                                 russianCount(
-                                  group.entries.length,
+                                  group.variants.length,
                                   'вариант',
                                   'варианта',
                                   'вариантов',
