@@ -177,6 +177,35 @@ class AppController extends AsyncNotifier<AppState> {
     await _commit(updated);
   }
 
+  Future<void> removePackage(String medicineId) async {
+    final current = state.requireValue;
+    final package = current.medicines
+        .where((item) => item.id == medicineId)
+        .firstOrNull;
+    if (package == null) return;
+    final pharmacy = current.pharmacies
+        .where((item) => item.id == package.pharmacyId)
+        .firstOrNull;
+    if (pharmacy?.canEdit != true) return;
+    final removedReminderIds = current.reminders
+        .where((item) => item.medicineId == medicineId)
+        .map((item) => item.id)
+        .toSet();
+    await _commit(
+      current.copyWith(
+        medicines: current.medicines
+            .where((item) => item.id != medicineId)
+            .toList(),
+        reminders: current.reminders
+            .where((item) => item.medicineId != medicineId)
+            .toList(),
+        intakeRecords: current.intakeRecords
+            .where((item) => !removedReminderIds.contains(item.reminderId))
+            .toList(),
+      ),
+    );
+  }
+
   Future<void> _commit(AppState updated) async {
     final scopeId = updated.profileScopeId;
     if (scopeId != ref.read(activeProfileIdProvider)) {

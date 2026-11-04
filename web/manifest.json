@@ -3,9 +3,9 @@
     "short_name": "Аптечка",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#EAEEF7",
+    "theme_color": "#EAEEF7",
+    "description": "Лекарства, сроки годности и расписание приёма.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

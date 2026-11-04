@@ -215,7 +215,8 @@ void main() {
       expect(added.registrationId, 'ЛП-005975');
       expect(added.quantity, 20);
       expect(added.expiryDate, isNull);
-      expect(find.text('Содержимое аптечки'), findsOneWidget);
+      expect(find.byTooltip('Добавить упаковку'), findsOneWidget);
+      expect(find.text('Дом'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

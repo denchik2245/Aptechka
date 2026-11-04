@@ -7,150 +7,290 @@ abstract final class AppTheme {
 
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final textTheme = _textTheme(isDark);
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.sage,
-      brightness: brightness,
-      surface: isDark ? const Color(0xFF121B18) : AppColors.canvas,
+    final text = isDark ? AppColors.darkInk : AppColors.ink;
+    final muted = isDark ? AppColors.darkMuted : AppColors.muted;
+    final canvas = isDark ? AppColors.darkCanvas : AppColors.canvas;
+    final card = isDark ? AppColors.darkCard : AppColors.card;
+    final line = isDark ? AppColors.darkLine : AppColors.line;
+    final primary = isDark ? const Color(0xFF70AEFF) : AppColors.primary;
+    final textTheme = _textTheme(text, muted);
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          brightness: brightness,
+        ).copyWith(
+          primary: primary,
+          onPrimary: isDark ? AppColors.darkCanvas : Colors.white,
+          primaryContainer: isDark
+              ? const Color(0xFF1D365A)
+              : AppColors.primarySoft,
+          onPrimaryContainer: primary,
+          secondary: text,
+          onSecondary: card,
+          secondaryContainer: text,
+          onSecondaryContainer: card,
+          tertiary: isDark ? AppColors.warning : AppColors.warningText,
+          tertiaryContainer: isDark
+              ? const Color(0xFF442E18)
+              : AppColors.warningSoft,
+          onTertiaryContainer: isDark
+              ? const Color(0xFFFFBE65)
+              : AppColors.warningText,
+          error: isDark ? const Color(0xFFFF8C90) : AppColors.danger,
+          errorContainer: isDark
+              ? const Color(0xFF49252F)
+              : AppColors.dangerSoft,
+          onErrorContainer: isDark ? const Color(0xFFFFAEB1) : AppColors.danger,
+          surface: canvas,
+          onSurface: text,
+          onSurfaceVariant: muted,
+          surfaceContainerLowest: card,
+          surfaceContainerLow: card,
+          surfaceContainer: card,
+          surfaceContainerHigh: isDark ? AppColors.darkPlate : AppColors.canvas,
+          surfaceContainerHighest: isDark
+              ? AppColors.darkPlate
+              : AppColors.canvas,
+          outline: muted,
+          outlineVariant: line,
+          surfaceTint: Colors.transparent,
+        );
+    final pill = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(100),
     );
-
+    OutlineInputBorder fieldBorder([BorderSide side = BorderSide.none]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: side,
+        );
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
-      colorScheme: colorScheme,
-      scaffoldBackgroundColor: colorScheme.surface,
+      fontFamily: 'Manrope',
+      colorScheme: scheme,
+      scaffoldBackgroundColor: canvas,
       visualDensity: VisualDensity.standard,
       textTheme: textTheme,
+      iconTheme: IconThemeData(color: muted, size: 24),
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: canvas,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: textTheme.titleLarge,
+        iconTheme: IconThemeData(color: text),
       ),
       cardTheme: CardThemeData(
         margin: EdgeInsets.zero,
         elevation: 0,
-        color: isDark ? const Color(0xFF1A2521) : Colors.white,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(
-            color: isDark ? const Color(0xFF2D3A35) : AppColors.line,
-          ),
-          borderRadius: BorderRadius.circular(20),
-        ),
+        color: card,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? const Color(0xFF1A2521) : Colors.white,
+        fillColor: card,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
+          horizontal: 24,
+          vertical: 18,
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(
-            color: isDark ? const Color(0xFF34443E) : AppColors.line,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.sage, width: 2),
+        labelStyle: TextStyle(color: muted, fontSize: 14),
+        hintStyle: TextStyle(color: muted, fontSize: 14),
+        border: fieldBorder(),
+        enabledBorder: fieldBorder(),
+        focusedBorder: fieldBorder(BorderSide(color: primary, width: 1.5)),
+        errorBorder: fieldBorder(BorderSide(color: scheme.error, width: 1.5)),
+        focusedErrorBorder: fieldBorder(
+          BorderSide(color: scheme.error, width: 1.5),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(48, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          minimumSize: const Size(48, 56),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: pill,
+          textStyle: const TextStyle(
+            fontFamily: 'Manrope',
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(48, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          minimumSize: const Size(48, 56),
+          foregroundColor: primary,
+          side: BorderSide(color: line),
+          shape: pill,
+          textStyle: const TextStyle(
+            fontFamily: 'Manrope',
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          textStyle: const TextStyle(
+            fontFamily: 'Manrope',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shape: pill,
+        extendedTextStyle: const TextStyle(
+          fontFamily: 'Manrope',
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         height: 72,
         elevation: 0,
-        backgroundColor: isDark ? const Color(0xFF121B18) : Colors.white,
-        indicatorColor: isDark ? const Color(0xFF315D50) : AppColors.mint,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          return TextStyle(
-            fontSize: 12,
-            fontWeight: states.contains(WidgetState.selected)
-                ? FontWeight.w700
-                : FontWeight.w500,
-          );
-        }),
+        backgroundColor: card.withValues(alpha: 0.88),
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: isDark ? AppColors.darkPlate : const Color(0xFFE5E7ED),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected) ? primary : text,
+            size: 24,
+          ),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontFamily: 'Manrope',
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: states.contains(WidgetState.selected) ? primary : text,
+          ),
+        ),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: canvas,
+        indicatorColor: isDark
+            ? const Color(0xFF1D365A)
+            : AppColors.primarySoft,
+        selectedIconTheme: IconThemeData(color: primary),
+        unselectedIconTheme: IconThemeData(color: muted),
+        selectedLabelTextStyle: TextStyle(
+          fontFamily: 'Manrope',
+          color: primary,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelTextStyle: TextStyle(
+          fontFamily: 'Manrope',
+          color: muted,
+          fontSize: 12,
+        ),
       ),
       chipTheme: ChipThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF34443E) : AppColors.line,
-        ),
+        shape: pill,
+        side: BorderSide(color: line),
         labelStyle: TextStyle(
-          color: colorScheme.onSurface,
-          fontWeight: FontWeight.w600,
+          color: text,
+          fontFamily: 'Manrope',
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
-        selectedColor: colorScheme.secondaryContainer,
-        backgroundColor: colorScheme.surface,
-        checkmarkColor: colorScheme.onSecondaryContainer,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        secondaryLabelStyle: TextStyle(
+          color: card,
+          fontFamily: 'Manrope',
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        selectedColor: text,
+        backgroundColor: canvas,
+        checkmarkColor: card,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       ),
-      dividerTheme: DividerThemeData(
-        color: isDark ? const Color(0xFF2D3A35) : AppColors.line,
+      switchTheme: SwitchThemeData(
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? AppColors.primary : null,
+        ),
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? Colors.white : null,
+        ),
       ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: card,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: card,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+      dividerTheme: DividerThemeData(color: line, thickness: 0.5, space: 1),
     );
   }
 
-  static TextTheme _textTheme(bool isDark) {
-    final textColor = isDark ? const Color(0xFFF0F5F2) : AppColors.ink;
-    final mutedColor = isDark ? const Color(0xFFB7C5BF) : AppColors.muted;
-    return TextTheme(
-      displaySmall: TextStyle(
-        color: textColor,
-        fontSize: 36,
-        height: 1.12,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -1.2,
-      ),
-      headlineMedium: TextStyle(
-        color: textColor,
-        fontSize: 26,
-        height: 1.2,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.5,
-      ),
-      titleLarge: TextStyle(
-        color: textColor,
-        fontSize: 21,
-        height: 1.25,
-        fontWeight: FontWeight.w700,
-      ),
-      titleMedium: TextStyle(
-        color: textColor,
-        fontSize: 17,
-        height: 1.3,
-        fontWeight: FontWeight.w700,
-      ),
-      bodyLarge: TextStyle(color: textColor, fontSize: 16, height: 1.5),
-      bodyMedium: TextStyle(color: mutedColor, fontSize: 14, height: 1.45),
-      labelLarge: TextStyle(
-        color: textColor,
-        fontSize: 14,
-        height: 1.3,
-        fontWeight: FontWeight.w700,
-      ),
-    );
-  }
+  static TextTheme _textTheme(Color text, Color muted) => TextTheme(
+    displaySmall: TextStyle(
+      color: text,
+      fontSize: 32,
+      height: 1.25,
+      fontWeight: FontWeight.w800,
+    ),
+    headlineMedium: TextStyle(
+      color: text,
+      fontSize: 32,
+      height: 1.25,
+      fontWeight: FontWeight.w800,
+    ),
+    headlineSmall: TextStyle(
+      color: text,
+      fontSize: 24,
+      height: 1.2,
+      fontWeight: FontWeight.w700,
+    ),
+    titleLarge: TextStyle(
+      color: text,
+      fontSize: 24,
+      height: 1.2,
+      fontWeight: FontWeight.w700,
+    ),
+    titleMedium: TextStyle(
+      color: text,
+      fontSize: 18,
+      height: 1.35,
+      fontWeight: FontWeight.w700,
+    ),
+    titleSmall: TextStyle(
+      color: text,
+      fontSize: 16,
+      height: 1.4,
+      fontWeight: FontWeight.w700,
+    ),
+    bodyLarge: TextStyle(color: text, fontSize: 16, height: 1.5),
+    bodyMedium: TextStyle(color: muted, fontSize: 14, height: 1.4),
+    bodySmall: TextStyle(color: muted, fontSize: 12, height: 1.4),
+    labelLarge: TextStyle(
+      color: text,
+      fontSize: 16,
+      height: 1.3,
+      fontWeight: FontWeight.w700,
+    ),
+    labelMedium: TextStyle(
+      color: muted,
+      fontSize: 12,
+      height: 1.35,
+      fontWeight: FontWeight.w600,
+    ),
+    labelSmall: TextStyle(
+      color: muted,
+      fontSize: 10,
+      height: 1.2,
+      fontWeight: FontWeight.w700,
+    ),
+  ).apply(fontFamily: 'Manrope');
 }

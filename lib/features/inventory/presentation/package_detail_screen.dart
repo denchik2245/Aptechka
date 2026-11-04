@@ -1,17 +1,25 @@
 import 'package:aptechka/core/utils/drug_text.dart';
 import 'package:aptechka/core/utils/date_labels.dart';
 import 'package:aptechka/core/widgets/async_value_view.dart';
+import 'package:aptechka/core/widgets/design_icon.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
-import 'package:aptechka/features/inventory/presentation/widgets/package_status_badge.dart';
-import 'package:aptechka/features/inventory/presentation/widgets/drug_photo.dart';
+import 'package:aptechka/features/inventory/presentation/widgets/medicine_list_card.dart';
 import 'package:aptechka/features/medicines/domain/medicine.dart';
+import 'package:aptechka/features/shell/presentation/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class PackageDetailScreen extends ConsumerWidget {
+class PackageDetailScreen extends ConsumerStatefulWidget {
   const PackageDetailScreen({required this.packageId, super.key});
-
   final String packageId;
+  @override
+  ConsumerState<PackageDetailScreen> createState() =>
+      _PackageDetailScreenState();
+}
+
+class _PackageDetailScreenState extends ConsumerState<PackageDetailScreen> {
+  bool _saving = false;
 
   Future<void> _edit(
     BuildContext context,
@@ -20,7 +28,7 @@ class PackageDetailScreen extends ConsumerWidget {
   ) async {
     final update = await showDialog<_PackageUpdate>(
       context: context,
-      builder: (context) => _EditPackageDialog(package: package),
+      builder: (_) => _EditPackageDialog(package: package),
     );
     if (update == null) return;
     await ref
@@ -35,233 +43,420 @@ class PackageDetailScreen extends ConsumerWidget {
         );
   }
 
+  Future<void> _changeQuantity(Medicine package, int delta) async {
+    if (_saving || package.quantity + delta < 0) return;
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(appControllerProvider.notifier)
+          .updatePackage(
+            medicineId: package.id,
+            quantity: package.quantity + delta,
+            location: package.location,
+            expiryDate: package.expiryDate,
+            openedAt: package.openedAt,
+            afterOpeningDays: package.afterOpeningDays,
+          );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось сохранить остаток. Повторите попытку.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _remove(Medicine package) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Убрать из аптечки?'),
+        content: Text(
+          '«${readableDrugName(package.name)}»: эта упаковка, её расписание и история приёма будут удалены.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Убрать'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(appControllerProvider.notifier).removePackage(package.id);
+      if (mounted) context.go('/inventory');
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось удалить упаковку. Повторите попытку.'),
+          ),
+        );
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final appState = ref.watch(appControllerProvider);
+    final loadedPackage = appState.asData?.value.medicines
+        .where((m) => m.id == widget.packageId)
+        .firstOrNull;
+    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Упаковка')),
+      extendBody: true,
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(
+          loadedPackage == null
+              ? 'Лекарство'
+              : readableDrugName(loadedPackage.name),
+          style: theme.textTheme.titleSmall,
+        ),
+        leading: Padding(
+          padding: const EdgeInsets.all(6),
+          child: IconButton.filledTonal(
+            tooltip: 'Назад',
+            padding: EdgeInsets.zero,
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/inventory'),
+            icon: Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: theme.colorScheme.onSurface,
+            ),
+            style: IconButton.styleFrom(
+              backgroundColor: theme.colorScheme.surfaceContainer,
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: const AppNavigationBar(selectedIndex: 0),
       body: SafeArea(
         top: false,
         child: AsyncValueView(
           value: appState,
           data: (state) {
             final package = state.medicines
-                .where((item) => item.id == packageId)
+                .where((m) => m.id == widget.packageId)
                 .firstOrNull;
             if (package == null) {
               return const Center(child: Text('Упаковка не найдена'));
             }
             final pharmacy = state.pharmacies
-                .where((item) => item.id == package.pharmacyId)
+                .where((p) => p.id == package.pharmacyId)
                 .firstOrNull;
+            final canEdit = pharmacy?.canEdit == true;
             final status = package.statusAt(
               DateTime.now(),
               warningDays: state.settings.expiryWarningDays,
             );
+            final statusIcon = switch (status) {
+              MedicineStatus.okay => 'detail-okay',
+              MedicineStatus.expired => 'status-expired',
+              _ => 'status-warning',
+            };
+            final expiryText = switch (status) {
+              MedicineStatus.expired => 'Срок истёк',
+              MedicineStatus.unknown => 'Срок не указан полностью',
+              _ => compactDate(package.effectiveExpiryDate!),
+            };
+            final reminders = state.reminders
+                .where((r) => r.medicineId == package.id)
+                .toList();
+            final specs = <(String, String)>[
+              ('Форма выпуска', readableDrugText(package.form)),
+              ('Дозировка', package.dosageLabel),
+              (
+                'Действующее вещество',
+                package.activeIngredient == null
+                    ? 'Не указано'
+                    : readableDrugText(package.activeIngredient!),
+              ),
+              if (package.manufacturer != null)
+                ('Производитель', readableManufacturer(package.manufacturer!)),
+              ('Аптечка', pharmacy?.name ?? 'Не указана'),
+              (
+                'Срок на упаковке',
+                package.expiryDate == null
+                    ? 'Не указан'
+                    : compactDate(package.expiryDate!),
+              ),
+              (
+                'Дата вскрытия',
+                package.openedAt == null
+                    ? 'Не отмечена'
+                    : compactDate(package.openedAt!),
+              ),
+              if (package.openedAt != null)
+                (
+                  'После вскрытия',
+                  package.afterOpeningExpiry == null
+                      ? 'Срок не внесён'
+                      : 'До ${compactDate(package.afterOpeningExpiry!)}',
+                ),
+              if (package.gtin != null) ('Штрихкод', package.gtin!),
+              if (package.packageDescription != null)
+                (
+                  'Упаковка в каталоге',
+                  readableDrugText(package.packageDescription!),
+                ),
+              if (package.registrationId != null)
+                ('Регистрационное удостоверение', package.registrationId!),
+              if (package.registrationStatus != null)
+                ('Статус в источнике', package.registrationStatus!),
+              if (package.catalogVersion != null)
+                ('Выгрузка МДЛП', package.catalogVersion!),
+              if (package.notes != null) ('Заметка', package.notes!),
+            ];
             return Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 720),
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   children: [
-                    Text(
-                      pharmacy?.name ?? 'Аптечка',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              MedicineThumbnail(
+                                medicine: package,
+                                width: 131,
+                                height: 192,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    0,
+                                    12,
+                                    12,
+                                    12,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${readableDrugText(package.form)} · ${package.dosageLabel}',
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color:
+                                                  theme.colorScheme.onSurface,
+                                            ),
+                                      ),
+                                      if (package.activeIngredient != null) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          readableDrugText(
+                                            package.activeIngredient!,
+                                          ),
+                                          style: theme.textTheme.bodyMedium,
+                                        ),
+                                      ],
+                                      const Spacer(),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Годен до',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          DesignIcon(statusIcon, size: 18),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              expiryText,
+                                              style: theme.textTheme.titleSmall,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      readableDrugName(package.name),
-                      style: Theme.of(context).textTheme.headlineMedium,
+                    const SizedBox(height: 16),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: _InfoTile(
+                              label: 'Где лежит',
+                              value: package.location,
+                              icon: 'detail-location',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: _InfoTile(
+                              label: 'Для чего',
+                              value: 'Не указано',
+                              icon: 'purpose',
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${package.dosageLabel} · ${readableDrugText(package.form)}',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    DrugPhotoPanel(
-                      gtin: package.catalogEntryId?.startsWith('mdlp:') == true
-                          ? package.catalogEntryId!.substring(5)
-                          : package.gtin,
-                    ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            _QuantityButton(
+                              icon: 'quantity-plus',
+                              label: 'Увеличить остаток',
+                              onPressed: canEdit && !_saving
+                                  ? () => _changeQuantity(package, 1)
+                                  : null,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'Осталось',
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                  Text(
+                                    '${package.quantity} ${package.unit}',
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.titleMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _QuantityButton(
+                              icon: 'quantity-minus',
+                              label: 'Уменьшить остаток',
+                              onPressed:
+                                  canEdit && !_saving && package.quantity > 0
+                                  ? () => _changeQuantity(package, -1)
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            PackageStatusBadge(status: status),
-                            const SizedBox(height: 14),
                             Text(
-                              _statusExplanation(
-                                package,
-                                status,
-                                state.settings.expiryWarningDays,
+                              'Как применять',
+                              style: theme.textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              reminders.isEmpty
+                                  ? 'Схема приёма не добавлена. Следуйте инструкции к вашей упаковке и назначению врача.'
+                                  : reminders
+                                        .map(
+                                          (r) => '${r.timeLabel} — ${r.dose}',
+                                        )
+                                        .join('\n'),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurface,
                               ),
-                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Сверяйте дозировку и способ применения с инструкцией к препарату.',
+                              style: theme.textTheme.bodySmall,
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _FactCard(
-                            label: 'ОСТАЛОСЬ',
-                            value: '${package.quantity} ${package.unit}',
-                            icon: Icons.inventory_2_outlined,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _FactCard(
-                            label: 'ГДЕ ЛЕЖИТ',
-                            value: package.location,
-                            icon: Icons.place_outlined,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    if (package.catalogEntryId != null) ...[
-                      Text(
-                        'Данные справочника',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 12),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            children: [
-                              if (package.manufacturer != null)
-                                _DetailRow(
-                                  label: 'Производитель',
-                                  value: readableManufacturer(
-                                    package.manufacturer!,
-                                  ),
-                                ),
-                              if (package.packageDescription != null) ...[
-                                const SizedBox(height: 16),
-                                _DetailRow(
-                                  label: 'Упаковка в каталоге',
-                                  value: readableDrugText(
-                                    package.packageDescription!,
-                                  ),
-                                ),
-                              ],
-                              if (package.registrationId != null) ...[
-                                const SizedBox(height: 16),
-                                _DetailRow(
-                                  label: 'Регистрационное удостоверение',
-                                  value: package.registrationId!,
-                                ),
-                              ],
-                              if (package.registrationStatus != null) ...[
-                                const SizedBox(height: 16),
-                                _DetailRow(
-                                  label: 'Статус в источнике',
-                                  value: package.registrationStatus!,
-                                ),
-                              ],
-                              if (package.catalogVersion != null) ...[
-                                const SizedBox(height: 16),
-                                _DetailRow(
-                                  label: 'Выгрузка МДЛП',
-                                  value: package.catalogVersion!,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                    Text(
-                      'Сроки этой упаковки',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          children: [
-                            _DetailRow(
-                              label: 'Срок на упаковке',
-                              value: package.expiryDate == null
-                                  ? 'Не указан'
-                                  : compactDate(package.expiryDate!),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              'Другие характеристики',
+                              style: theme.textTheme.titleMedium,
                             ),
-                            const Divider(height: 28),
-                            _DetailRow(
-                              label: 'Дата вскрытия',
-                              value: package.openedAt == null
-                                  ? 'Не отмечена'
-                                  : compactDate(package.openedAt!),
-                            ),
-                            const Divider(height: 28),
-                            _DetailRow(
-                              label: 'После вскрытия',
-                              value: package.openedAt == null
-                                  ? 'Не применяется'
-                                  : package.afterOpeningExpiry == null
-                                  ? 'Срок не внесён'
-                                  : 'До ${compactDate(package.afterOpeningExpiry!)}',
-                            ),
-                            if (package.effectiveExpiryDate != null &&
-                                !package.hasIncompleteExpiryData) ...[
-                              const Divider(height: 28),
-                              _DetailRow(
-                                label: 'Более ранний срок',
-                                value: compactDate(
-                                  package.effectiveExpiryDate!,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Статус рассчитан только по внесённым датам. Он не подтверждает условия хранения или назначение препарата.',
-                    ),
-                    if (package.gtin != null || package.notes != null) ...[
-                      const SizedBox(height: 24),
-                      Text(
-                        'Дополнительно',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 12),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            children: [
-                              if (package.gtin != null)
-                                _DetailRow(label: 'GTIN', value: package.gtin!),
-                              if (package.gtin != null && package.notes != null)
-                                const Divider(height: 28),
-                              if (package.notes != null)
-                                _DetailRow(
-                                  label: 'Заметка',
-                                  value: package.notes!,
-                                ),
-                            ],
                           ),
-                        ),
+                          for (final (label, value) in specs) ...[
+                            const Divider(),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(label, style: theme.textTheme.bodySmall),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    value,
+                                    style: theme.textTheme.titleSmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
-                    if (pharmacy?.canEdit == true) ...[
-                      const SizedBox(height: 24),
-                      FilledButton.icon(
+                    ),
+                    if (canEdit) ...[
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
                         onPressed: () => _edit(context, ref, package),
                         icon: const Icon(Icons.edit_outlined),
                         label: const Text('Изменить упаковку'),
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => _remove(package),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 18,
+                            ),
+                            child: Text(
+                              'Убрать из аптечки',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: theme.colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ],
@@ -273,34 +468,17 @@ class PackageDetailScreen extends ConsumerWidget {
       ),
     );
   }
-
-  String _statusExplanation(
-    Medicine package,
-    MedicineStatus status,
-    int warningDays,
-  ) => switch (status) {
-    MedicineStatus.expired =>
-      'По одной из внесённых дат срок уже истёк. Проверьте эту упаковку.',
-    MedicineStatus.expiringSoon =>
-      'По внесённым датам до ближайшего срока осталось не более $warningDays дней.',
-    MedicineStatus.okay => 'По внесённым датам срок не истёк.',
-    MedicineStatus.unknown =>
-      package.openedAt != null && package.afterOpeningDays == null
-          ? 'Упаковка вскрыта, но срок после вскрытия не указан.'
-          : 'Для оценки срока недостаточно внесённых данных.',
-  };
 }
 
-class _FactCard extends StatelessWidget {
-  const _FactCard({
+class _InfoTile extends StatelessWidget {
+  const _InfoTile({
     required this.label,
     required this.value,
     required this.icon,
   });
   final String label;
   final String value;
-  final IconData icon;
-
+  final String icon;
   @override
   Widget build(BuildContext context) => Card(
     child: Padding(
@@ -308,40 +486,38 @@ class _FactCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          DesignIcon(icon),
           const SizedBox(height: 12),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall
-                ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1),
-          ),
-          const SizedBox(height: 5),
-          Text(value, style: Theme.of(context).textTheme.titleMedium),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          Text(value, style: Theme.of(context).textTheme.titleSmall),
         ],
       ),
     ),
   );
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+class _QuantityButton extends StatelessWidget {
+  const _QuantityButton({
+    required this.icon,
+    required this.label,
+    this.onPressed,
+  });
+  final String icon;
   final String label;
-  final String value;
-
+  final VoidCallback? onPressed;
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(child: Text(label)),
-      const SizedBox(width: 16),
-      Flexible(
-        child: Text(
-          value,
-          textAlign: TextAlign.end,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
+  Widget build(BuildContext context) => SizedBox(
+    width: 44,
+    height: 44,
+    child: IconButton(
+      tooltip: label,
+      padding: EdgeInsets.zero,
+      onPressed: onPressed,
+      icon: Opacity(
+        opacity: onPressed == null ? 0.35 : 1,
+        child: DesignIcon(icon, size: 44),
       ),
-    ],
+    ),
   );
 }
 

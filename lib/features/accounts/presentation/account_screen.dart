@@ -115,10 +115,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
                   children: [
-                    _Notice(
-                      icon: Icons.science_outlined,
-                      text: 'Демонстрация аккаунтов. Вход не подтверждает личность. Профили и записи хранятся только на этом устройстве; письма не отправляются, облако не подключено.',
-                    ),
                     if (_busy)
                       const Padding(
                         padding: EdgeInsets.only(top: 16),
@@ -132,7 +128,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        'В будущей онлайн-версии аккаунт сохранит аптечки между устройствами. Сейчас можно проверить сценарии входа, привязки и переноса в локальном демо.',
+                        'Выберите профиль, чтобы хранить аптечки и настройки отдельно на этом устройстве.',
                       ),
                       const SizedBox(height: 24),
                       FilledButton.icon(
@@ -318,11 +314,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _Notice(
-                        icon: Icons.cloud_off_outlined,
-                        text: 'Синхронизация между устройствами и приглашения в общую аптечку пока не подключены. Для облака потребуется сервер в РФ и отдельное оформление обработки данных о здоровье.',
-                      ),
-                      const SizedBox(height: 24),
                       _Heading('Управление профилем'),
                       const SizedBox(height: 12),
                       Card(
@@ -444,39 +435,28 @@ class AccountPrivacyScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const _Notice(
-                icon: Icons.science_outlined,
-                text: 'Это описание проектируемой системы, а не действующая политика или согласие. Сервис пока не собирает данные на сервере.',
-              ),
-              const SizedBox(height: 24),
-              _Heading('Минимум данных для аккаунта'),
+              _Heading('Профили на этом устройстве'),
               const SizedBox(height: 8),
               const Text(
-                'Для входа понадобятся подтверждённый адрес почты либо идентификатор Яндекса. Имя можно выбрать самостоятельно. Контакты, паспорт, геолокация и доступ к Яндекс Диску не нужны для обычного аккаунта.',
+                'У каждого профиля свои аптечки и настройки. Данные сохраняются на этом устройстве и не отправляются в облако.',
               ),
               const SizedBox(height: 24),
-              _Heading('Российская инфраструктура'),
+              _Heading('Ваши записи'),
               const SizedBox(height: 8),
               const Text(
-                'Планируем хранить аккаунты, аптечки, резервные копии и служебные журналы в РФ. Провайдер входа получает запрос авторизации, но не списки лекарств или историю приёма.',
+                'Приложение хранит добавленные лекарства, сроки годности, расписание и отметки о приёме. Гостевые записи можно скопировать в выбранный профиль.',
               ),
               const SizedBox(height: 24),
-              _Heading('Отдельное решение для данных о здоровье'),
+              _Heading('Резервная копия'),
               const SizedBox(height: 8),
               const Text(
-                'Сведения о приёме и лекарствах могут раскрывать состояние здоровья. Перед облачным сохранением потребуется определить законное основание и, когда оно необходимо, оформить письменное согласие, включая допустимую электронную форму. Простое создание аккаунта не запускает отправку записей.',
+                'В настройках можно сохранить копию в JSON и восстановить её на другом устройстве. Файл содержит ваши записи — выбирайте для него подходящее место хранения.',
               ),
               const SizedBox(height: 24),
-              _Heading('Контроль остаётся у вас'),
+              _Heading('Управление данными'),
               const SizedBox(height: 8),
               const Text(
-                'В онлайн-версии будут доступны список устройств, завершение сеансов, выгрузка данных, отзыв согласия и удаление аккаунта. Доступ к общей аптечке предоставляется отдельно; личное расписание и история не открываются другим участникам автоматически.',
-              ),
-              const SizedBox(height: 24),
-              _Heading('Документы до запуска'),
-              const SizedBox(height: 8),
-              const Text(
-                'Потребуются реквизиты оператора, политика обработки данных, условия использования, отдельные формы согласий, сроки хранения и контакты для обращений. До их оформления прототип не выдаёт демо-переключатели за юридически значимое согласие.',
+                'В настройках можно удалить записи, а в аккаунте — текущий профиль. При удалении профиля гостевые аптечки сохраняются.',
               ),
             ],
           ),
@@ -703,34 +683,6 @@ class _RenameDialogState extends State<_RenameDialog> {
         child: const Text('Сохранить'),
       ),
     ],
-  );
-}
-
-class _Notice extends StatelessWidget {
-  const _Notice({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-  @override
-  Widget build(BuildContext context) => Card(
-    color: Theme.of(context).colorScheme.primaryContainer,
-    child: Padding(
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Theme.of(context).colorScheme.onPrimaryContainer),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
   );
 }
 

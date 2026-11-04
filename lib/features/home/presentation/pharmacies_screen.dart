@@ -1,9 +1,8 @@
-import 'package:aptechka/features/accounts/application/account_controller.dart';
+import 'package:aptechka/core/widgets/design_icon.dart';
+import 'package:aptechka/core/theme/app_colors.dart';
 import 'package:aptechka/core/widgets/async_value_view.dart';
-import 'package:aptechka/core/utils/russian_count.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
 import 'package:aptechka/features/inventory/domain/app_state.dart';
-import 'package:aptechka/features/inventory/domain/medicine_group.dart';
 import 'package:aptechka/features/inventory/domain/pharmacy.dart';
 import 'package:aptechka/features/medicines/domain/medicine.dart';
 import 'package:flutter/material.dart';
@@ -58,67 +57,49 @@ class PharmaciesScreen extends ConsumerWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 820),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
                 children: [
-                  Text(
-                    'ВАШЕ ПРОСТРАНСТВО',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
                           'Мои аптечки',
-                          style: Theme.of(context).textTheme.headlineMedium,
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                fontSize: 32,
+                                height: 44 / 32,
+                                letterSpacing: 0,
+                                fontWeight: FontWeight.w800,
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.light
+                                    ? const Color(0xFF1A1A1A)
+                                    : AppColors.darkInk,
+                              ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => context.push('/account'),
-                        tooltip: 'Аккаунт',
-                        icon: const Icon(Icons.account_circle_outlined),
+                      const SizedBox(width: 12),
+                      IconButton.filled(
+                        onPressed: () => _createPharmacy(context, ref),
+                        tooltip: 'Создать аптечку',
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          fixedSize: const Size(44, 44),
+                          minimumSize: const Size(44, 44),
+                          padding: const EdgeInsets.all(10),
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        icon: const DesignIcon('add'),
                       ),
                     ],
                   ),
-                  Text(
-                    ref
-                            .watch(localAccountsProvider)
-                            .asData
-                            ?.value
-                            .active
-                            ?.name ??
-                        'Без аккаунта · гостевые записи',
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Выберите аптечку, чтобы увидеть лекарства и конкретные упаковки.',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 24),
-                  _PrototypeNotice(),
-                  const SizedBox(height: 28),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Аптечки',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ),
-                      Text(
-                        '${state.pharmacies.length}',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 36),
                   ...state.pharmacies.map(
                     (pharmacy) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: 8),
                       child: _PharmacyCard(
                         pharmacy: pharmacy,
                         state: state,
@@ -131,12 +112,6 @@ class PharmaciesScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => _createPharmacy(context, ref),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Создать аптечку'),
-                  ),
                 ],
               ),
             ),
@@ -145,29 +120,6 @@ class PharmaciesScreen extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _PrototypeNotice extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Icon(Icons.science_outlined),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Text(
-            'Прототип с примерными данными. Изменения хранятся только на этом устройстве; настоящий вход и семейная синхронизация пока не подключены.',
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 class _PharmacyCard extends StatelessWidget {
@@ -184,91 +136,144 @@ class _PharmacyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final packages = state.medicinesIn(pharmacy.id);
-    final groups = groupMedicines(packages);
-    final attention = packages
+    final theme = Theme.of(context);
+    int count(MedicineStatus status) => packages
         .where(
           (item) =>
               item.statusAt(
                 DateTime.now(),
                 warningDays: state.settings.expiryWarningDays,
-              ) !=
-              MedicineStatus.okay,
+              ) ==
+              status,
         )
         .length;
+    final expired = count(MedicineStatus.expired);
+    final expiring = count(MedicineStatus.expiringSoon);
+    final unknown = count(MedicineStatus.unknown);
+    final captionStyle = theme.textTheme.bodySmall?.copyWith(
+      fontSize: 12,
+      height: 16 / 12,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0,
+    );
+    final valueStyle = theme.textTheme.titleSmall?.copyWith(
+      fontSize: 16,
+      height: 22 / 16,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0,
+    );
+    final statuses = <(String, String)>[
+      if (expired > 0)
+        (
+          'status-expired',
+          '$expired ${expired == 1 ? 'просрочена' : 'просрочены'}',
+        ),
+      if (expiring > 0)
+        (
+          'status-warning',
+          expired > 0
+              ? '+$expiring'
+              : '$expiring скоро ${expiring == 1 ? 'истечёт' : 'истекут'}',
+        ),
+      if (expired == 0 && expiring == 0)
+        unknown > 0
+            ? ('status-warning', 'Проверьте сроки')
+            : (
+                'status-okay',
+                packages.isEmpty ? 'Нет препаратов' : 'Все в норме',
+              ),
+    ];
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 132),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    DesignIcon(
+                      pharmacy.isShared ? 'forest' : 'home',
+                      size: 28,
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    child: Icon(
-                      pharmacy.isShared
-                          ? Icons.group_outlined
-                          : Icons.home_outlined,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        pharmacy.name,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontSize: 24,
+                          height: 1.2,
+                          letterSpacing: 0,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Center(
+                        child: DesignIcon(
+                          'chevron',
+                          width: 7,
+                          height: 12,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, thickness: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 13, 16, 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Сроки годности', style: captionStyle),
+                          const SizedBox(height: 3),
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 4,
+                            children: [
+                              for (final (icon, text) in statuses)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    DesignIcon(icon, size: 18),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(text, style: valueStyle),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          pharmacy.name,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        Text(
-                          pharmacy.isShared
-                              ? 'Пример общей · владелец: ${pharmacy.ownerLabel}'
-                              : 'Личная аптечка',
-                        ),
+                        Text('Элементов', style: captionStyle),
+                        const SizedBox(height: 3),
+                        Text('${packages.length}', style: valueStyle),
                       ],
                     ),
-                  ),
-                  const Icon(Icons.arrow_forward_ios, size: 18),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _CountChip(
-                    icon: Icons.medication_outlined,
-                    text: russianCount(
-                      groups.length,
-                      'препарат',
-                      'препарата',
-                      'препаратов',
-                    ),
-                  ),
-                  _CountChip(
-                    icon: Icons.inventory_2_outlined,
-                    text: russianCount(
-                      packages.length,
-                      'упаковка',
-                      'упаковки',
-                      'упаковок',
-                    ),
-                  ),
-                  if (attention > 0)
-                    _CountChip(
-                      icon: Icons.info_outline,
-                      text:
-                          '${russianCount(attention, 'упаковка', 'упаковки', 'упаковок')} ${attention == 1 ? 'требует' : 'требуют'} проверки',
-                    ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -276,29 +281,4 @@ class _PharmacyCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _CountChip extends StatelessWidget {
-  const _CountChip({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(text, style: Theme.of(context).textTheme.labelMedium),
-        ),
-      ],
-    ),
-  );
 }

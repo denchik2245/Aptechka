@@ -40,6 +40,7 @@ dependencies:
   intl: ^0.20.3
   mobile_scanner: ^7.4.2
   uuid: ^4.6.0
+  flutter_svg: ^2.3.2
 
 dev_dependencies:
   flutter_test:
@@ -65,6 +66,20 @@ flutter:
   assets:
     - assets/drug_catalog/mdlp_catalog.json
     - assets/drug_photos/
+    - assets/icons/figma/
+  fonts:
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/manrope-regular.ttf
+          weight: 400
+        - asset: assets/fonts/manrope-medium.ttf
+          weight: 500
+        - asset: assets/fonts/manrope-semibold.ttf
+          weight: 600
+        - asset: assets/fonts/manrope-bold.ttf
+          weight: 700
+        - asset: assets/fonts/manrope-extrabold.ttf
+          weight: 800
 
   # To add assets to your application, add an assets section, like this:
   # assets:

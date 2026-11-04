@@ -674,7 +674,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                           subtitle: const Text(
-                            'В прототипе системные уведомления ещё не работают',
+                            'Время приёма и отметки о приёме лекарства',
                           ),
                         ),
                         if (_createReminder) ...[

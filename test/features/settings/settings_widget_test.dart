@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('dark filters wrap, remain legible and location reset works', (
+  testWidgets('dark filters scroll, remain legible and location reset works', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(360, 740);

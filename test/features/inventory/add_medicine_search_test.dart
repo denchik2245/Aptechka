@@ -143,10 +143,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('Препарат'), findsOneWidget);
-      expect(
-        find.text('500 МЕ · Таблетки, покрытые оболочкой'),
-        findsOneWidget,
-      );
+      expect(find.text('500 МЕ'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

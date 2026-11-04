@@ -1,5 +1,6 @@
 import 'package:aptechka/features/accounts/presentation/account_screen.dart';
 import 'package:aptechka/features/home/presentation/pharmacies_screen.dart';
+import 'package:aptechka/features/inventory/presentation/medicine_search_screen.dart';
 import 'package:aptechka/features/inventory/presentation/add_medicine_screen.dart';
 import 'package:aptechka/features/inventory/presentation/drug_catalog_screen.dart';
 import 'package:aptechka/features/inventory/presentation/drug_catalog_variants_screen.dart';
@@ -58,6 +59,11 @@ final appRouter = GoRouter(
           ],
         ),
       ],
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/search',
+      builder: (context, state) => const MedicineSearchScreen(),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

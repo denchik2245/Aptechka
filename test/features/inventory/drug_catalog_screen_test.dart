@@ -49,7 +49,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Добавить упаковку'));
+    await tester.tap(find.byTooltip('Добавить упаковку'));
     await tester.pumpAndSettle();
     return container;
   }
@@ -247,7 +247,8 @@ void main() {
       );
       await tester.tap(find.text('Добавить упаковку').last);
       await tester.pumpAndSettle();
-      expect(find.text('Содержимое аптечки'), findsOneWidget);
+      expect(find.byTooltip('Добавить упаковку'), findsOneWidget);
+      expect(find.text('Дом'), findsOneWidget);
       final medicines = container
           .read(appControllerProvider)
           .requireValue

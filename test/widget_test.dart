@@ -18,10 +18,9 @@ void main() {
     expect(find.text('Мои аптечки'), findsOneWidget);
     await tester.tap(find.text('Дом'));
     await tester.pumpAndSettle();
-    expect(find.text('Содержимое аптечки'), findsOneWidget);
+    expect(find.text('Дом'), findsOneWidget);
+    expect(find.byTooltip('Добавить упаковку'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField).first, 'Ибупрофен');
-    await tester.pumpAndSettle();
     expect(find.text('Ибупрофен'), findsWidgets);
     await tester.tap(find.text('Ибупрофен').last);
     await tester.pumpAndSettle();
@@ -30,7 +29,7 @@ void main() {
 
     await tester.tap(find.text('14 таблеток'));
     await tester.pumpAndSettle();
-    expect(find.text('ГДЕ ЛЕЖИТ'), findsOneWidget);
+    expect(find.text('Где лежит'), findsOneWidget);
     expect(find.text('Верхняя полка'), findsOneWidget);
   });
 

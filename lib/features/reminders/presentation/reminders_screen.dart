@@ -16,7 +16,7 @@ class RemindersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appState = ref.watch(appControllerProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Приём лекарств')),
+      appBar: AppBar(title: const Text('Лечение')),
       body: SafeArea(
         top: false,
         child: AsyncValueView(
@@ -59,7 +59,7 @@ class _ReminderContent extends ConsumerWidget {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Отмечайте факт приёма. На этом этапе расписание сохраняется локально; системные уведомления будут подключены следующими.',
+                        'Ваше расписание и отметки о приёме лекарств.',
                       ),
                     ),
                   ],

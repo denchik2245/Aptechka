@@ -1,4 +1,5 @@
 import 'package:aptechka/features/medicines/domain/medicine.dart';
+import 'package:aptechka/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class PackageStatusBadge extends StatelessWidget {
@@ -24,8 +25,12 @@ class PackageStatusBadge extends StatelessWidget {
     final (icon, foreground, background) = switch (status) {
       MedicineStatus.okay => (
         Icons.check_circle_outline,
-        scheme.primary,
-        scheme.primaryContainer,
+        Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF79DD8C)
+            : AppColors.successText,
+        Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF193524)
+            : AppColors.successSoft,
       ),
       MedicineStatus.expiringSoon => (
         Icons.schedule,
@@ -47,7 +52,7 @@ class PackageStatusBadge extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12, vertical: 8),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

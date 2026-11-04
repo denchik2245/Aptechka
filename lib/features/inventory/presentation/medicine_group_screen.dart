@@ -1,4 +1,5 @@
 import 'package:aptechka/core/utils/drug_text.dart';
+import 'package:aptechka/features/shell/presentation/app_shell.dart';
 import 'package:aptechka/core/utils/date_labels.dart';
 import 'package:aptechka/core/utils/russian_count.dart';
 import 'package:aptechka/core/widgets/async_value_view.dart';
@@ -18,6 +19,8 @@ class MedicineGroupScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appState = ref.watch(appControllerProvider);
     return Scaffold(
+      extendBody: true,
+      bottomNavigationBar: const AppNavigationBar(selectedIndex: 0),
       appBar: AppBar(title: const Text('Упаковки препарата')),
       body: SafeArea(
         top: false,
