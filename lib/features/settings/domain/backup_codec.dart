@@ -77,10 +77,33 @@ abstract final class BackupCodec {
                 item.minute > 59 ||
                 item.dose.trim().isEmpty,
           ) ||
+          !unique(state.courses.map((c) => c.id)) ||
+          state.courses.any(
+            (c) =>
+                c.name.trim().isEmpty ||
+                c.person.trim().isEmpty ||
+                (c.durationDays != null &&
+                    (c.durationDays! < 1 || c.durationDays! > 3650)) ||
+                c.repeatMinutes < 0,
+          ) ||
+          state.reminders.any(
+            (r) =>
+                (r.courseId != null &&
+                    !state.courses.any((c) => c.id == r.courseId)) ||
+                r.amount < 1 ||
+                r.cycleDays < 1 ||
+                r.breakDays < 1 ||
+                r.weekdays.any((d) => d < 1 || d > 7) ||
+                (r.durationDays != null && r.durationDays! < 1),
+          ) ||
           state.intakeRecords.any(
-            (item) => !state.reminders.any(
-              (reminder) => reminder.id == item.reminderId,
-            ),
+            (item) =>
+                item.stockDelta < 0 ||
+                (item.status.name == 'deferred' &&
+                    item.deferredUntil == null) ||
+                !state.reminders.any(
+                  (reminder) => reminder.id == item.reminderId,
+                ),
           )) {
         throw const FormatException();
       }

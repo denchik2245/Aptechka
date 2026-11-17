@@ -8,6 +8,7 @@ import 'package:aptechka/features/reminders/domain/medication_reminder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import 'package:aptechka/features/reminders/domain/treatment_course.dart';
 import 'package:aptechka/features/settings/domain/app_settings.dart';
 
 final appControllerProvider = AsyncNotifierProvider<AppController, AppState>(
@@ -159,22 +160,134 @@ class AppController extends AsyncNotifier<AppState> {
     await _commit(updated);
   }
 
-  Future<void> recordIntake(String reminderId, IntakeStatus status) async {
+  Future<void> setTreatmentShopping(Set<String> ids) =>
+      _commit(state.requireValue.copyWith(treatmentShoppingIds: ids.toList()));
+
+  Future<void> saveCourse(
+    TreatmentCourse course,
+    List<MedicationReminder> reminders,
+  ) async {
     final current = state.requireValue;
-    final today = DateTime.now();
-    final recordsWithoutToday = current.intakeRecords.where((record) {
-      return record.reminderId != reminderId ||
-          record.occurredAt.year != today.year ||
-          record.occurredAt.month != today.month ||
-          record.occurredAt.day != today.day;
-    }).toList();
-    final updated = current.copyWith(
-      intakeRecords: [
-        ...recordsWithoutToday,
-        IntakeRecord(reminderId: reminderId, occurredAt: today, status: status),
-      ],
+    if (course.name.trim().isEmpty || reminders.isEmpty) {
+      throw StateError('Добавьте название и препарат');
+    }
+    for (final reminder in reminders) {
+      if (!current.medicines.any((m) => m.id == reminder.medicineId)) {
+        throw StateError('Препарат больше не находится в аптечке');
+      }
+    }
+    final keptIds = reminders.map((r) => r.id).toSet();
+    final removedIds = current.reminders
+        .where((r) => r.courseId == course.id && !keptIds.contains(r.id))
+        .map((r) => r.id)
+        .toSet();
+    // Preserve older schedules with history, but disable them when editing a course.
+    final historical = current.reminders
+        .where(
+          (r) =>
+              removedIds.contains(r.id) &&
+              current.intakeRecords.any((i) => i.reminderId == r.id),
+        )
+        .map((r) => r.copyWith(enabled: false));
+    await _commit(
+      current.copyWith(
+        courses: [...current.courses.where((c) => c.id != course.id), course],
+        reminders: [
+          ...current.reminders.where((r) => r.courseId != course.id),
+          ...historical,
+          ...reminders,
+        ],
+      ),
     );
-    await _commit(updated);
+  }
+
+  Future<void> updateCourse(TreatmentCourse course) => _commit(
+    state.requireValue.copyWith(
+      courses: state.requireValue.courses
+          .map((c) => c.id == course.id ? course : c)
+          .toList(),
+    ),
+  );
+
+  Future<void> deleteCourse(String id) async {
+    final current = state.requireValue;
+    final ids = current.reminders
+        .where((r) => r.courseId == id)
+        .map((r) => r.id)
+        .toSet();
+    await _commit(
+      current.copyWith(
+        courses: current.courses.where((c) => c.id != id).toList(),
+        reminders: current.reminders.where((r) => !ids.contains(r.id)).toList(),
+        intakeRecords: current.intakeRecords
+            .where((r) => !ids.contains(r.reminderId))
+            .toList(),
+      ),
+    );
+  }
+
+  Future<void> recordIntake(
+    String reminderId,
+    IntakeStatus status, {
+    DateTime? scheduledDate,
+    DateTime? occurredAt,
+    DateTime? deferredUntil,
+    String reason = '',
+  }) async {
+    final current = state.requireValue;
+    final reminder = current.reminders
+        .where((r) => r.id == reminderId)
+        .firstOrNull;
+    if (reminder == null) return;
+    final day = treatmentDay(scheduledDate ?? DateTime.now());
+    if (day.isAfter(treatmentDay(DateTime.now()))) {
+      throw StateError('Будущий приём пока нельзя отметить');
+    }
+    final old = current.intakeRecords
+        .where((r) => r.reminderId == reminderId && r.day == day)
+        .firstOrNull;
+    final medicine = current.medicines
+        .where((m) => m.id == reminder.medicineId)
+        .firstOrNull;
+    final available = (medicine?.quantity ?? 0) + (old?.stockDelta ?? 0);
+    // Only convert identical stock/dose units; drops cannot be subtracted from a bottle or ml.
+    bool sameUnit(String a, String b) =>
+        a == b ||
+        (a.startsWith('таблет') && b.startsWith('таблет')) ||
+        (a.startsWith('капсул') && b.startsWith('капсул')) ||
+        (a.startsWith('флакон') && b.startsWith('флакон'));
+    final canDeduct =
+        reminder.courseId != null &&
+        medicine != null &&
+        sameUnit(reminder.unit.toLowerCase(), medicine.unit.toLowerCase());
+    final delta = status == IntakeStatus.taken && canDeduct
+        ? reminder.amount.clamp(0, available)
+        : 0;
+    await _commit(
+      current.copyWith(
+        medicines: current.medicines
+            .map(
+              (m) => m.id == reminder.medicineId
+                  ? m.copyWith(quantity: available - delta)
+                  : m,
+            )
+            .toList(),
+        intakeRecords: [
+          ...current.intakeRecords.where(
+            (r) => r.reminderId != reminderId || r.day != day,
+          ),
+          IntakeRecord(
+            reminderId: reminderId,
+            scheduledDate: day,
+            occurredAt: occurredAt ?? DateTime.now(),
+            status: status,
+            deferredUntil: deferredUntil,
+            reason: reason,
+            stockDelta: delta,
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> removePackage(String medicineId) async {
@@ -193,6 +306,9 @@ class AppController extends AsyncNotifier<AppState> {
         .toSet();
     await _commit(
       current.copyWith(
+        treatmentShoppingIds: current.treatmentShoppingIds
+            .where((id) => id != medicineId)
+            .toList(),
         medicines: current.medicines
             .where((item) => item.id != medicineId)
             .toList(),
@@ -250,6 +366,8 @@ class AppController extends AsyncNotifier<AppState> {
   Future<void> clearInventory() => _commit(
     state.requireValue.copyWith(
       medicines: const [],
+      courses: const [],
+      treatmentShoppingIds: const [],
       reminders: const [],
       intakeRecords: const [],
     ),
@@ -261,16 +379,7 @@ class AppController extends AsyncNotifier<AppState> {
       current.copyWith(
         reminders: current.reminders
             .map(
-              (item) => item.id != id
-                  ? item
-                  : MedicationReminder(
-                      id: item.id,
-                      medicineId: item.medicineId,
-                      hour: item.hour,
-                      minute: item.minute,
-                      dose: item.dose,
-                      enabled: enabled,
-                    ),
+              (item) => item.id != id ? item : item.copyWith(enabled: enabled),
             )
             .toList(),
       ),

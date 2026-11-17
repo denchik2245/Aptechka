@@ -11,6 +11,9 @@ import 'package:aptechka/features/inventory/presentation/pharmacy_inventory_scre
 import 'package:aptechka/features/inventory/presentation/medicine_group_screen.dart';
 import 'package:aptechka/features/inventory/presentation/package_detail_screen.dart';
 import 'package:aptechka/features/reminders/presentation/reminders_screen.dart';
+import 'package:aptechka/features/reminders/presentation/course_detail_screen.dart';
+import 'package:aptechka/features/reminders/presentation/course_editor_screen.dart';
+import 'package:aptechka/features/reminders/presentation/notification_preview_screen.dart';
 import 'package:aptechka/features/scanner/presentation/barcode_scanner_screen.dart';
 import 'package:aptechka/features/settings/presentation/settings_screen.dart';
 import 'package:aptechka/features/shell/presentation/app_shell.dart';
@@ -57,6 +60,33 @@ final appRouter = GoRouter(
               builder: (context, state) => const SettingsScreen(),
             ),
           ],
+        ),
+      ],
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/treatment/notification/:id',
+      builder: (context, state) =>
+          NotificationPreviewScreen(id: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/treatment/new',
+      builder: (context, state) => CourseEditorScreen(
+        editId: state.uri.queryParameters['edit'],
+        repeatId: state.uri.queryParameters['repeat'],
+      ),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/treatment/course/:id',
+      builder: (context, state) =>
+          CourseDetailScreen(id: state.pathParameters['id']!),
+      routes: [
+        GoRoute(
+          path: 'history',
+          builder: (context, state) =>
+              CourseHistoryScreen(id: state.pathParameters['id']!),
         ),
       ],
     ),

@@ -1,6 +1,7 @@
 import 'package:aptechka/app/router.dart';
 import 'package:aptechka/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aptechka/features/inventory/application/medicine_controller.dart';
 import 'package:aptechka/features/settings/domain/app_settings.dart';
@@ -15,6 +16,9 @@ class AptechkaApp extends ConsumerWidget {
         const AppSettings();
     return MaterialApp.router(
       title: 'Аптечка',
+      locale: const Locale('ru'),
+      supportedLocales: const [Locale('ru')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
@@ -27,6 +31,7 @@ class AptechkaApp extends ConsumerWidget {
         final media = MediaQuery.of(context);
         return MediaQuery(
           data: media.copyWith(
+            alwaysUse24HourFormat: true,
             textScaler: _AppTextScaler(media.textScaler, settings.textScale),
           ),
           child: child!,

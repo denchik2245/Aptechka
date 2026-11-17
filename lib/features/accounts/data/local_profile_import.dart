@@ -1,5 +1,6 @@
 import 'package:aptechka/features/inventory/domain/app_state.dart';
 import 'package:aptechka/features/inventory/domain/pharmacy.dart';
+import 'package:aptechka/features/reminders/domain/treatment_course.dart';
 import 'package:aptechka/features/reminders/domain/medication_reminder.dart';
 
 abstract final class LocalProfileImport {
@@ -65,13 +66,10 @@ abstract final class LocalProfileImport {
         ...reminders
             .where((item) => !existingReminders.contains(mapped(item.id)))
             .map(
-              (item) => MedicationReminder(
+              (item) => item.copyWith(
                 id: mapped(item.id),
                 medicineId: mapped(item.medicineId),
-                hour: item.hour,
-                minute: item.minute,
-                dose: item.dose,
-                enabled: item.enabled,
+                courseId: item.courseId == null ? null : mapped(item.courseId!),
               ),
             ),
       ],
@@ -90,7 +88,30 @@ abstract final class LocalProfileImport {
                 reminderId: mapped(item.reminderId),
                 occurredAt: item.occurredAt,
                 status: item.status,
+                scheduledDate: item.scheduledDate,
+                deferredUntil: item.deferredUntil,
+                reason: item.reason,
+                stockDelta: item.stockDelta,
               ),
+            ),
+      ],
+      courses: [
+        ...target.courses,
+        ...guest.courses
+            .where(
+              (c) =>
+                  reminders.any((r) => r.courseId == c.id) &&
+                  !target.courses.any(
+                    (existing) => existing.id == mapped(c.id),
+                  ),
+            )
+            .map(
+              (c) => TreatmentCourse.fromJson({
+                ...c.toJson(),
+                'id': mapped(c.id),
+                'notifyFamily': false,
+                'visibility': 'Только я',
+              }),
             ),
       ],
       selectedPharmacyId: selected.isEmpty

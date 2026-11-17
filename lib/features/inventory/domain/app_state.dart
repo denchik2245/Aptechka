@@ -1,4 +1,5 @@
 import 'package:aptechka/features/inventory/domain/pharmacy.dart';
+import 'package:aptechka/features/reminders/domain/treatment_course.dart';
 import 'package:aptechka/features/settings/domain/app_settings.dart';
 import 'package:aptechka/features/medicines/domain/medicine.dart';
 import 'package:aptechka/features/reminders/domain/medication_reminder.dart';
@@ -12,6 +13,8 @@ class AppState {
     required this.intakeRecords,
     this.settings = const AppSettings(),
     this.profileScopeId = 'guest',
+    this.courses = const [],
+    this.treatmentShoppingIds = const [],
   });
 
   final List<Pharmacy> pharmacies;
@@ -19,6 +22,8 @@ class AppState {
   final List<Medicine> medicines;
   final List<MedicationReminder> reminders;
   final List<IntakeRecord> intakeRecords;
+  final List<TreatmentCourse> courses;
+  final List<String> treatmentShoppingIds;
   final AppSettings settings;
   final String profileScopeId;
 
@@ -36,9 +41,13 @@ class AppState {
     List<Medicine>? medicines,
     List<MedicationReminder>? reminders,
     List<IntakeRecord>? intakeRecords,
+    List<TreatmentCourse>? courses,
+    List<String>? treatmentShoppingIds,
     AppSettings? settings,
     String? profileScopeId,
   }) => AppState(
+    courses: courses ?? this.courses,
+    treatmentShoppingIds: treatmentShoppingIds ?? this.treatmentShoppingIds,
     pharmacies: pharmacies ?? this.pharmacies,
     selectedPharmacyId: selectedPharmacyId ?? this.selectedPharmacyId,
     medicines: medicines ?? this.medicines,
@@ -49,6 +58,8 @@ class AppState {
   );
 
   Map<String, Object?> toJson() => {
+    'treatmentShoppingIds': treatmentShoppingIds,
+    'courses': courses.map((item) => item.toJson()).toList(),
     'settings': settings.toJson(),
     'profileScopeId': profileScopeId,
     'pharmacies': pharmacies.map((item) => item.toJson()).toList(),
@@ -78,6 +89,15 @@ class AppState {
               .toList();
     final selected = json['selectedPharmacyId'] as String?;
     return AppState(
+      treatmentShoppingIds:
+          (json['treatmentShoppingIds'] as List?)?.cast<String>() ?? const [],
+      courses: (json['courses'] as List? ?? [])
+          .map(
+            (item) => TreatmentCourse.fromJson(
+              Map<String, Object?>.from(item as Map),
+            ),
+          )
+          .toList(),
       profileScopeId: json['profileScopeId'] as String? ?? 'guest',
       settings: AppSettings.fromJson(
         Map<String, Object?>.from(json['settings'] as Map? ?? const {}),
